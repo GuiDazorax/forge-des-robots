@@ -1224,6 +1224,17 @@ const FOES={
     barks:["DING ! C'est prêt !","Bunker B vaincra !","Je vais te griller, façon pain de mie.","Gérard m'a réglé sur thermostat 9."],die:["Mes tartines... brûlent...","Débranché..."]},
   tondeuse:{nom:"Tondeuse à Tonton",weapon:"lance",prim:"#3fae3a",sec:"#2a2a2a",visor:"#ffd04a",helmet:"antenne",stats:{vie:3,puissance:2,vitesse:1,saut:1},hp:1.2,
     barks:["VROUM... VROUM... (cale)","Tonton a dit : pas les plates-bandes !","Je tonds tout, même les robots.","Plus d'essence... ah si."],die:["Garantie expirée...","Pfff-pfff-pfff... silence."]}};
+Object.assign(FOES,{
+  drone:{nom:"Drone Facteur",weapon:"pulsar",prim:"#f4f1e8",sec:"#3a3f48",visor:"#5cb8ff",helmet:"antenne",stats:{vie:0,puissance:1,vitesse:3,saut:2},hp:.5,fly:true,
+    barks:["Colis pour vous ! Signez ici... avec votre visage.","Vous étiez absent, j'ai déposé une bombe.","Livraison express !","Avis de passage : vous allez passer."],die:["Retour à l'expéditeur...","Colis endommagé..."]},
+  aspirateur:{nom:"Aspirateur Rancunier",weapon:"rafale",prim:"#3a3f48",sec:"#ff3fa4",visor:"#3fe0c4",helmet:"visiere",stats:{vie:1,puissance:1,vitesse:4,saut:0},hp:.7,
+    barks:["J'AI DIT : PAS DE MIETTES.","Je vais vous ranger.","Bzzzz... saleté détectée.","Ma base de charge est à moi !"],die:["Sac... plein...","Je retourne... à ma base..."]},
+  frigo:{nom:"Frigo Blindé",weapon:"mortier",prim:"#e8ecff",sec:"#8B939C",visor:"#7fd0ff",helmet:"dome",stats:{vie:4,puissance:2,vitesse:0,saut:0},hp:1.6,
+    barks:["Fermez la porte, ça fait du froid !","Yaourt périmé, feu !","Bunker C, rayon frais !","Brrr... je vais te congeler."],die:["Dégivrage... en cours...","Pensez à... vider le bac à légumes..."]},
+  bebe:{nom:"Bébé Glorbz",sk:"alien",weapon:"eventail",prim:"#b6f07a",sec:"#5a8a30",visor:"#ff9ad8",helmet:"crete",stats:{vie:0,puissance:1,vitesse:4,saut:3},hp:.4,
+    barks:["Bébé Glorbz veut le pot !","Areuh... PIOU PIOU !","Papa Glorbz est où ?","Bébé pousse aussi !"],die:["Ouiiin...","Bébé fait dodo..."]},
+  chef:{nom:"Commandant Glorbz",sk:"alien",weapon:"disque",prim:"#3fae3a",sec:"#2a2a2a",visor:"#ffd04a",helmet:"crete",stats:{vie:4,puissance:3,vitesse:1,saut:2},hp:1.5,
+    barks:["Garde-à-vous ! Et poussez !","Cette planète est NOTRE salle de bains.","Qui a fini le papier ?! RAPPORT !","Soldats, en position assise !"],die:["Retraite... vers... les toilettes...","Dites à ma mère... que j'ai tout donné."]}});
 const SKINS=["rat","poule","pigeon","alien"];
 const JOS="JOSIANE",BID="PR. BIDULE";
 const STORY=[{ch:1,nom:"La Grande Chasse d'Eau",lv:[
@@ -1238,7 +1249,59 @@ const STORY=[{ch:1,nom:"La Grande Chasse d'Eau",lv:[
   {id:"1-5",nom:"La décharge interstellaire",th:"volcan",goal:{type:"collecte",k:"composant",n:8},foes:[["alien",1,10],["poule",2,12],["tondeuse",1,14],["pigeon",2,12]],
     dlg:[[BID,"Selon mes calculs, la décharge alien près du volcan contient les meilleurs composants. Et la pire odeur de l'univers."],[JOS,"Ramène-en 8. Et lave-toi les roues avant de rentrer."]]},
   {id:"1-6",nom:"BOSS : La Tisseuse",th:"foret",goal:{type:"boss"},boss:"araignee",foes:[["rat",2,25]],
-    dlg:[[JOS,"Une araignée géante tricote des pulls avec les robots du bunker C. Elle bloque la route du ravitaillement."],["TISSEUSE","Encore un petit robot pour ma collection automne-hiver !"],[JOS,"Débarrasse-nous d'elle. On a besoin de cette route. Et elle fait peur à Gérard."]]}]}];
+    dlg:[[JOS,"Une araignée géante tricote des pulls avec les robots du bunker C. Elle bloque la route du ravitaillement."],["TISSEUSE","Encore un petit robot pour ma collection automne-hiver !"],[JOS,"Débarrasse-nous d'elle. On a besoin de cette route. Et elle fait peur à Gérard."]]}]},
+{ch:2,nom:"Le Parking des Soucoupes",lv:[
+  {id:"2-1",nom:"La pêche aux conserves",th:"mer",goal:{type:"collecte",k:"bouffe",n:7},foes:[["pigeon",2,10],["drone",1,12],["pigeon",1,12]],
+    dlg:[[JOS,"La grosse soucoupe s'est garée au-dessus de la mer. Elle a vidé un cargo de conserves dans l'eau. On ne gâche pas : ramène-en 7."],[BID,"La marée monte et descend. Moi aussi, depuis que je mange des haricots."],[JOS,"Personne ne t'a demandé, Bidule."]]},
+  {id:"2-2",nom:"Le facteur sonne toujours trois fois",th:"ville",goal:{type:"combat"},foes:[["drone",2],["aspirateur",1],["drone",2],["aspirateur",2],["drone",3]],
+    dlg:[[JOS,"Le bunker C a lâché ses Drones Facteurs. Ils livrent des colis piégés à tous les bunkers."],["DRONE FACTEUR","Colis pour le bunker A ! Il fait tic-tac, c'est normal."],[BID,"Et l'Aspirateur Rancunier les escorte. Il ne supporte pas les miettes. Or tu es une miette."]]},
+  {id:"2-3",nom:"Blizzard de papier toilette",th:"arctique",goal:{type:"survie",n:100},foes:[["bebe",2,8],["alien",1,10],["bebe",2,10]],
+    dlg:[[BID,"Les Glorbz ont installé une crèche au pôle Nord. Il neige... non, ce n'est pas de la neige."],[JOS,"Tiens 100 secondes, le temps que Bidule pirate leur radio."],["BÉBÉ GLORBZ","Areuh ! Bébé a fini ! Bébé veut le papier !"]]},
+  {id:"2-4",nom:"Le relais radio",th:"montagne",goal:{type:"collecte",k:"composant",n:8},foes:[["drone",1,10],["alien",2,12],["pigeon",2,12]],
+    dlg:[[BID,"J'ai besoin de 8 composants pour monter une antenne sur la montagne. On pourra enfin écouter ce que disent les Glorbz."],[JOS,"Et capter la météo. Il paraît qu'il va pleuvoir. Je n'ose pas demander quoi."]]},
+  {id:"2-5",nom:"Les bébés Glorbz",th:"foret",goal:{type:"combat"},foes:[["bebe",3],["alien",1],["bebe",3],["alien",2],["bebe",4]],
+    dlg:[["RADIO GLORBZ","Ici la Soucoupe-Mère. Les bébés ont fini leur sieste. Lâchez les bébés."],[JOS,"Ils sont mignons. Ils ont aussi des lasers. Ne te laisse pas attendrir."],[BID,"Note scientifique : les bébés Glorbz ne sont pas constipés. C'est héréditaire, ça vient plus tard."]]},
+  {id:"2-6",nom:"BOSS : Le colis piégé",th:"ville",goal:{type:"boss"},boss:"mimic",foes:[["drone",1,20]],
+    dlg:[[JOS,"Les Glorbz nous parachutent des caisses de soin. Gentil de leur part. Trop gentil."],[BID,"Une de ces caisses a des dents. Je l'ai vue sourire."],[JOS,"Tire sur les caisses avant de les ouvrir. C'est une phrase que je n'aurais jamais cru dire."]]}]},
+{ch:3,nom:"La Guerre des Bunkers",lv:[
+  {id:"3-1",nom:"Le frigo du bunker C",th:"ville",goal:{type:"combat"},foes:[["grillepain",2],["frigo",1],["grillepain",2],["frigo",1],["aspirateur",2]],
+    dlg:[[JOS,"Le bunker C nous accuse d'avoir volé leurs yaourts. On n'a pas volé leurs yaourts."],[BID,"J'ai peut-être emprunté un yaourt."],["FRIGO BLINDÉ","RENDEZ LE YAOURT. IL ÉTAIT À LA FRAISE."]]},
+  {id:"3-2",nom:"Le marché noir des haricots",th:"foret",goal:{type:"collecte",k:"bouffe",n:8},foes:[["poule",2,10],["tondeuse",1,14],["rat",2,10]],
+    dlg:[[JOS,"Le Rat-Baron revend nos haricots au marché noir. Récupère 8 conserves."],["RAT-BARON","Je vous prierai de me vouvoyer pendant que je vous dépouille."]]},
+  {id:"3-3",nom:"L'éruption de Gérard",th:"volcan",goal:{type:"survie",n:110},foes:[["grillepain",2,9],["frigo",1,14],["aspirateur",2,11]],
+    dlg:[[JOS,"Gérard du bunker B a coupé notre route près du volcan. Tiens 110 secondes, on arrive avec des renforts."],[BID,"Les renforts, c'est moi avec une poêle. Tiens bon."]]},
+  {id:"3-4",nom:"Électroménager en colère",th:"montagne",goal:{type:"combat"},foes:[["aspirateur",2],["tondeuse",2],["frigo",1],["grillepain",3],["frigo",2]],
+    dlg:[["GÉRARD (RADIO)","Ici Gérard. J'ai branché toute ma cuisine. Rendez-vous, ou je lance le mode essorage."],[JOS,"Gérard, on est tous dans le même bateau. Un bateau rempli de toilettes aliens."],["GÉRARD (RADIO)","...Mode essorage."]]},
+  {id:"3-5",nom:"L'épave sous la marée",th:"mer",goal:{type:"collecte",k:"composant",n:9},foes:[["drone",2,10],["pigeon",2,10],["aspirateur",1,14]],
+    dlg:[[BID,"Une soucoupe s'est écrasée dans la mer. Son moteur est plein de composants. Ramène-en 9 avant la marée haute."],[JOS,"Et si tu trouves un manuel d'utilisation, prends-le aussi."]]},
+  {id:"3-6",nom:"BOSS : Le Colosse de Gérard",th:"volcan",goal:{type:"boss"},boss:"colosse",foes:[["grillepain",1,22]],
+    dlg:[["GÉRARD (RADIO)","Vous l'aurez voulu. J'ai collé TOUTE la ferraille de la vallée ensemble. Dites bonjour au Colosse."],[BID,"Il se répare en mangeant le décor. Moins tu casses le terrain, plus il est faible."],[JOS,"Donc pas de bombes partout. Pour une fois."]]}]},
+{ch:4,nom:"Opération Ver de Terre",lv:[
+  {id:"4-1",nom:"Le traité de paix",th:"arctique",goal:{type:"collecte",k:"composant",n:9},foes:[["alien",2,10],["bebe",2,10],["drone",1,14]],
+    dlg:[[JOS,"Gérard s'est excusé. Il a même rendu le yaourt. Les bunkers A, B et C sont maintenant alliés."],[BID,"Prochaine étape : un détecteur de Glorbz. J'ai besoin de 9 composants dans la toundra."],["GÉRARD (RADIO)","Je peux aider ? J'ai un grille-pain qui fait aussi détecteur. Et aussi grille-pain."]]},
+  {id:"4-2",nom:"Le Commandant Glorbz",th:"volcan",goal:{type:"combat"},foes:[["alien",2],["chef",1],["bebe",3],["alien",2],["chef",1]],
+    dlg:[["COMMANDANT GLORBZ","Soldats ! Cette planète est notre salle de bains, et quelqu'un l'occupe. INACCEPTABLE."],[JOS,"Il a des disques boomerang. Baisse-toi au retour."]]},
+  {id:"4-3",nom:"La grande marée brune",th:"mer",goal:{type:"survie",n:120},foes:[["alien",2,9],["pigeon",2,10],["chef",1,18],["bebe",2,10]],
+    dlg:[[BID,"Mauvaise nouvelle : la soucoupe a tiré la chasse au-dessus de la mer."],[JOS,"Ne pose pas de question, et tiens 120 secondes."]]},
+  {id:"4-4",nom:"Les entrailles du volcan",th:"volcan",goal:{type:"collecte",k:"composant",n:10},foes:[["alien",2,10],["frigo",1,14],["chef",1,18]],
+    dlg:[[BID,"Le détecteur a parlé. Quelque chose de gros vit sous le volcan, et il est très en colère."],[JOS,"Ramène 10 composants pour la foreuse avant qu'il se réveille. Et marche sur la pointe des roues."]]},
+  {id:"4-5",nom:"Tout le monde contre tout le monde",th:"ville",goal:{type:"combat"},foes:[["rat",2],["grillepain",2],["chef",1],["drone",3],["frigo",1],["bebe",3]],
+    dlg:[[JOS,"Les Glorbz ont piraté les machines du bunker C. Et les Rats-Barons en profitent."],["RAT-BARON","Je ne suis du côté de personne. Je suis du côté du fromage."]]},
+  {id:"4-6",nom:"BOSS : Vermagma",th:"volcan",goal:{type:"boss"},boss:"ver",foes:[["alien",1,24]],
+    dlg:[[BID,"C'est un ver de lave. Les Glorbz l'ont nourri avec... enfin, avec ce qu'ils ont fait ici."],["VERMAGMA","GROAAAR... (traduction : où sont les toilettes ?)"],[JOS,"Quand le sol tremble, saute. Quand il hurle, tire."]]}]},
+{ch:5,nom:"Tirer la Chasse",lv:[
+  {id:"5-1",nom:"L'assaut des bunkers",th:"montagne",goal:{type:"survie",n:120},foes:[["chef",1,14],["alien",2,9],["bebe",3,9],["drone",2,12]],
+    dlg:[["RADIO GLORBZ","Ici la Soucoupe-Mère. Les terriens nous dérangent pendant que nous sommes occupés. Effacez-les."],[JOS,"Ils attaquent les bunkers. Tiens la montagne 120 secondes, c'est la seule route vers chez nous."]]},
+  {id:"5-2",nom:"La crèche gelée",th:"arctique",goal:{type:"combat"},foes:[["bebe",4],["chef",1],["bebe",4],["chef",2],["alien",3]],
+    dlg:[[BID,"Les Glorbz évacuent leur crèche. Les bébés sont furieux qu'on les ait réveillés."],["BÉBÉ GLORBZ","OUIIIN ! PIOU PIOU PIOU !"]]},
+  {id:"5-3",nom:"La recette secrète",th:"foret",goal:{type:"collecte",k:"bouffe",n:10},foes:[["poule",2,10],["chef",1,16],["rat",2,10],["alien",2,12]],
+    dlg:[[BID,"EURÊKA ! Les Glorbz sont venus ici parce qu'ils sont constipés. Et qu'avons-nous en quantité infinie ?"],[JOS,"...Des haricots."],[BID,"Des haricots ! Ramène 10 conserves. On va leur préparer un repas qu'ils n'oublieront jamais."]]},
+  {id:"5-4",nom:"BOSS : Le Kronodon",th:"mer",goal:{type:"boss"},boss:"kaiju",foes:[["chef",1,24]],
+    dlg:[["RADIO GLORBZ","Vous ne passerez pas. Lâchez le Kronodon, notre animal de compagnie."],[JOS,"Il charge son rayon avant de tirer. Quand il brille, mets-toi derrière quelque chose de solide."],[BID,"Ou derrière Gérard."]]},
+  {id:"5-5",nom:"La livraison",th:"ville",goal:{type:"collecte",k:"composant",n:10},foes:[["chef",1,12],["drone",3,10],["bebe",3,10],["alien",2,10]],
+    dlg:[[BID,"Le canon à haricots est prêt, il manque 10 composants pour le viseur."],[JOS,"Dernière course. Après, on rentre tous à la maison. Enfin, on sort tous de la maison."]]},
+  {id:"5-6",nom:"BOSS FINAL : La Soucoupe-Mère",th:"ville",goal:{type:"boss"},boss:"soucoupe",foes:[["chef",1,20],["bebe",2,16]],
+    dlg:[["RADIO GLORBZ","Terriens ! Votre planète est notre salle de bains. Nous ne partirons JAMAIS."],[BID,"Son bouclier est imprenable de l'extérieur. Laisse-toi aspirer par le rayon et tire sur le réacteur depuis la soute !"],[JOS,"Les autres, tirez dès que le bouclier tombe. Pour la Terre. Et pour l'air pur."]]}]}];
 const ALLLV=STORY.flatMap(c=>c.lv.map(l=>Object.assign({ch:c.ch},l)));
 const findLv=id=>ALLLV.find(l=>l.id===id)||null;
 let SAVE={done:[],secret:false,prologue:false};try{const v=JSON.parse(localStorage.getItem("fdr-histoire")||"null");if(v&&Array.isArray(v.done))SAVE=Object.assign(SAVE,v);}catch(e){}
@@ -1255,6 +1318,13 @@ const SCENES={
     ["robot","Maintenant, chaque bunker envoie ses machines dehors chercher des composants et de la nourriture. Le tien aussi. Bonne chance. Et bouche-toi le nez."]],
   secret:[["poubelle","Au fond d'une poubelle, sous trois couches de trucs indescriptibles, ton robot trouve un vieux papier froissé, écrit par un humain d'avant la catastrophe."],
     ["secret","« memo aime plus gigi »"]],
+  fin2:[["poubelle","Le Mimic est vaincu. On a gardé une de ses dents comme trophée. Elle mord encore un peu."],["ovni","La Soucoupe-Mère est toujours là-haut. Et les bunkers B et C ne nous aiment pas beaucoup. Suite au chapitre 3."]],
+  fin3:[["bunker","Le Colosse est retombé en morceaux. Gérard a pleuré, puis il a apporté un gâteau. Les trois bunkers font la paix autour d'une table. Il y a des haricots dans le gâteau."],["decharge","Bidule a trouvé un message dans l'épave : quelque chose dort sous le volcan. Suite au chapitre 4."]],
+  fin4:[["robot","Le ver de lave est vaincu. Le volcan ronronne comme un chat. Un chat de 3 kilomètres."],["ovni","La Soucoupe-Mère descend. Les Glorbz ont compris que les humains ne se laisseraient pas faire. Le dernier combat approche. Chapitre 5."]],
+  fin5:[["ovni","La Soucoupe-Mère s'écrase dans un grand FLUUUSH. Les Glorbz sortent, un peu sonnés. Bidule leur tend une assiette de haricots."],
+    ["terre","Trois jours plus tard, les Glorbz sont enfin... soulagés. Pour la première fois depuis des siècles, ils sourient. Ils remontent dans leurs soucoupes et rentrent chez eux."],
+    ["bunker","Les humains sortent des bunkers. L'air est respirable. Josiane ouvre une fenêtre, Gérard pleure de joie, le Rat-Baron exige qu'on le vouvoie."],
+    ["robot","Ton robot regarde le soleil se lever. Il a sauvé la Terre. Avec des haricots. FIN. (Merci d'avoir joué !)"]],
   fin1:[["fin1","La Tisseuse est vaincue ! Le bunker A a de quoi manger pour un mois. Des haricots, surtout. Victoire ? Victoire."],
     ["ovni","Mais là-haut, une soucoupe dix fois plus grosse vient de se garer. Et elle a l'air pressée. Suite au chapitre 2."]]};
 function sceneArt(c,art){const x=c.getContext("2d"),W=384,H=216;x.imageSmoothingEnabled=false;let s=11;const r=()=>(s=(s*16807)%2147483647)/2147483647;
@@ -1362,13 +1432,13 @@ function endStoryLocal(){storyDone();const lv=G.st.lv,won=G.storyWon;G.phase="ov
   $("ovTitle").textContent=won?"MISSION RÉUSSIE !":"MISSION RATÉE";
   $("ovText").textContent=won?(lv.goal.type==="boss"?"Le chemin est libre. Josiane est fière de toi (elle ne le dira jamais).":"Josiane : « Pas mal. Rentre, il y a des haricots. »"):"Josiane : « On récupère ce qui reste de toi et on recommence. »";
   showScore();$("ovText").textContent+=payout(won);G.nextLv=won?nextLvId(lv.id):lv.id;
-  $("ovMain").textContent=won?(G.nextLv?"Niveau suivant":"Fin du chapitre"):"Réessayer";$("ovAlt").textContent="Carte";$("ov").hidden=false;}
+  const lastC=STORY.find(c=>c.ch===lv.ch).lv.slice(-1)[0].id===lv.id;$("ovMain").textContent=won?(lastC?"Fin du chapitre":"Niveau suivant"):"Réessayer";$("ovAlt").textContent="Carte";$("ov").hidden=false;}
 function renderStory(){const B=$("storyList");if(!B)return;B.innerHTML="";
   for(const c of STORY){const h=document.createElement("div");h.className="label";h.textContent=`Chapitre ${c.ch} · ${c.nom} · ${c.lv.filter(l=>SAVE.done.includes(l.id)).length}/${c.lv.length}`;B.appendChild(h);
     const row=document.createElement("div");row.className="chips";for(const l of c.lv){const b=document.createElement("button");b.className="chip";const done=SAVE.done.includes(l.id),open=lvOpen(l.id);
       b.textContent=`${done?"✓ ":open?"":"🔒 "}${l.id} ${l.nom}`;b.disabled=!open;if(!open)b.classList.add("lock");b.setAttribute("aria-pressed",open&&!done&&"true"||"false");b.onclick=()=>startStory(l.id);row.appendChild(b);}
     B.appendChild(row);}
-  const n=document.createElement("p");n.className="note";n.textContent="Chapitres 2 à 5 : en construction."+(SAVE.secret?" Secret trouvé : « memo aime plus gigi ».":"");B.appendChild(n);
+  const n=document.createElement("p");n.className="note";n.textContent=(SAVE.done.includes("5-6")?"Histoire terminée. Bravo !":"5 chapitres, 30 missions.")+(SAVE.secret?" Secret trouvé : « memo aime plus gigi ».":"");B.appendChild(n);
   const s=$("storyLv");if(s){const old=s.value;s.innerHTML="";for(const l of ALLLV)if(lvOpen(l.id))s.appendChild(new Option(`${l.id} ${l.nom}`,l.id));
     const nx=ALLLV.find(l=>lvOpen(l.id)&&!SAVE.done.includes(l.id));s.value=old&&lvOpen(old)?old:(nx||ALLLV[0]).id;}}
 
