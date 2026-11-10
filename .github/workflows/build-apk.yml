@@ -1,0 +1,46 @@
+name: Fabriquer l'APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Compiler l'APK
+        run: gradle --no-daemon assembleDebug
+
+      - name: Renommer l'APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk forge-des-robots.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: forge-des-robots-apk
+          path: forge-des-robots.apk
+
+      - name: Publier l'APK (lien de téléchargement fixe)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-latest
+          name: Forge des Robots (dernière version)
+          body: |
+            APK Android à installer sur chaque téléphone.
+            Sur le téléphone : ouvre ce lien, télécharge forge-des-robots.apk, puis autorise l'installation depuis ton navigateur.
+          files: forge-des-robots.apk
+          make_latest: true
