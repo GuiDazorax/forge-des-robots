@@ -797,7 +797,7 @@ function updFighter(F,inp,O){
   if(F.dashT>0){F.dashT--;F.vx=F.dashDir*4.4;if(F.t%2===0)G.fx.push({x:F.x,y:F.y-10,vx:0,vy:0,life:10,c:F.a.prim,s:3,ghost:true});}
   else if(F.stun||webbed)F.vx*=webbed?.7:.9;else F.vx+=(mv*spd-F.vx)*(TH.slip&&F.onGround?.08:.35);
   if(F.buffS>0&&Math.abs(F.vx)>1&&F.t%3===0)G.fx.push({x:F.x,y:F.y-10,vx:0,vy:0,life:8,c:"#ffd04a",s:3,ghost:true});
-  if(F.dashT>0)F.face=F.dashDir;else if(mv)F.face=mv;else if(!F.stun&&O)F.face=O.x>F.x?1:-1;
+  if(F.dashT>0)F.face=F.dashDir;else if(mv)F.face=mv;else if(F.ctrl==="ai"&&!F.stun&&O)F.face=O.x>F.x?1:-1;
   if(jumpP&&F.onGround&&!F.stun&&!webbed){F.vy=-F.jump*(F.buffS>0?1.12:1);F.onGround=false;sfx("jump");}
   if(!inp.jump&&F.vy<-1.5)F.vy+=.35;
   F.vy=Math.min(7,F.vy+(F.dashT>0?.12:.32));
@@ -886,25 +886,31 @@ function monFire(o){if(!isAuth())return;const M=G.mon;G.proj.push(mkProj(Object.
   if(G.online)G.monShots.push({i:++G.msN,k:o.kind,x:r1(o.x),y:r1(o.y),vx:r1(o.vx||0),vy:r1(o.vy||0),t:G.t});}
 function monTarget(M,preferWeb){let best=null,bd=1e9;for(const F of G.f){if(F.dead)continue;let d=Math.abs(F.x-M.x)+Math.abs(F.y-M.y);if(preferWeb&&F.web>0)d*=.4;if(d<bd){bd=d;best=F;}}return best;}
 function groundFollow(M){const gy=Math.min(LIQY,surfaceY(M.x,M.y-14));if(gy>M.y+1){M.vy=(M.vy||0)+.3;const ny=Math.min(gy,M.y+M.vy);if(ny>=gy)M.vy=0;return ny;}M.vy=0;return gy;}
-function aiVer(M){const inS=solid(M.x,M.y);
-  if(M.st==="entree"){if(M.t===1){M.vy=-5.4;M.vx=(Math.random()-.5);sfx("rumble");}
-    if(!inS&&M.y<WH-20){if(!M.burst){M.burst=true;M.sp++;doCarve(M.x,M.y,30,true);G.shake=26;sfx("roar");
-        for(let i=0;i<7;i++)monFire({kind:"lava",x:M.x,y:M.y-10,vx:(i-3)*1.1,vy:-4-Math.random()*2});}M.vy+=.14;}
-    else if(M.t%12===0)G.shake=Math.max(G.shake,6);
-    if(M.burst&&inS&&M.vy>0){M.st="chasse";M.t=0;}}
-  else{const T=monTarget(M);
-    if(T){const under=(M.t%420)<280,tx=T.x,ty=under?T.y+70:T.y-90;
-      if(inS){let dx=tx-M.x,dy=ty-M.y;const d=Math.hypot(dx,dy)||1;dx=dx/d*2.4;dy=dy/d*2.4;M.vx+=(dx-M.vx)*.05;M.vy+=(dy-M.vy)*.05;}
-      else{M.vy+=.13;if(--M.cd<=0){M.cd=45;const fr=40;monFire({kind:"lava",x:M.x,y:M.y,vx:Math.max(-5,Math.min(5,(T.x-M.x)/fr)),vy:Math.max(-7,Math.min(3,(T.y-12-M.y)/fr-.15*fr/2))});sfx("spit");}}}
-    else if(inS){M.vx*=.98;M.vy*=.98;}else M.vy+=.13;
-    const sp=Math.hypot(M.vx,M.vy),cap=inS?3.2:7;if(sp>cap){M.vx*=cap/sp;M.vy*=cap/sp;}}
-  M.x+=M.vx;M.y+=M.vy;
-  if(M.x<16){M.x=16;M.vx=Math.abs(M.vx);}if(M.x>WW-16){M.x=WW-16;M.vx=-Math.abs(M.vx);}
-  if(M.y>WH-18){M.y=WH-18;M.vy=-Math.abs(M.vy);}if(M.y<-40&&M.vy<0)M.vy*=.5;
-  if(Math.abs(M.vx)>.1)M.f=M.vx>0?1:-1;
-  M.dist+=Math.hypot(M.vx,M.vy);if(M.dist>7){M.dist=0;if(inS||solid(M.x+M.vx*4,M.y+M.vy*4))doCarve(M.x,M.y,12,true);}
-  M.hist.unshift(M.x,M.y);if(M.hist.length>144)M.hist.length=144;M.seg=[];for(let i=6;i<M.hist.length/2;i+=6)M.seg.push(Math.round(M.hist[2*i]),Math.round(M.hist[2*i+1]));
-  M.ang=Math.atan2(M.vy,M.vx);}
+// Vermagma : vit sous terre sans creuser, surgit sous un robot, se dresse et hurle, crache, puis replonge dans son trou.
+function aiVer(M){const T=monTarget(M),px=M.x,py=M.y;
+  if(M.st==="entree"||M.st==="surgit"){
+    if(M.t<=1){M.gy=Math.min(LIQY,surfaceY(M.x,0));M.burst=false;if(M.t===1)sfx("rumble");}
+    const top=M.gy-72;
+    if(M.t<40){M.y=Math.max(M.y,M.gy+40);if(M.t%6===0){G.shake=Math.max(G.shake,5);G.fx.push({x:M.x+(Math.random()-.5)*24,y:M.gy,vx:(Math.random()-.5)*1.5,vy:-1-Math.random()*1.5,life:22,c:TH.pal.top,s:2});}} // le sol tremble avant
+    else{M.y+=(top-M.y)*.14;
+      if(!M.burst&&M.y<M.gy){M.burst=true;M.sp++;doCarve(M.x,M.gy,M.st==="entree"?14:11,true);G.shake=22;sfx("boom");
+        for(let i=0;i<16;i++)G.fx.push({x:M.x,y:M.gy,vx:(Math.random()-.5)*5,vy:-2-Math.random()*3,life:30,c:i%2?TH.pal.top:"#ff7a1a",s:3});}
+      if(Math.abs(M.y-top)<2){M.st="hurle";M.t=0;}}}
+  else if(M.st==="hurle"){M.y=M.gy-72+Math.sin(M.t*.15)*2;if(T)M.f=T.x>M.x?1:-1;
+    if(M.t===12){sfx("roar");M.sp++;G.shake=24;for(const sd of [-1,1])monFire({kind:"shock",x:M.x+sd*16,y:M.gy-6,vx:sd*3.2,vy:0});}
+    if(M.t>=12&&M.t<70&&M.t%8===0)G.fx.push({x:M.x,y:M.y,vx:0,vy:0,life:16,c:"#ffb52e",s:3,ring:true,boom:10+M.t%24,max:16});
+    if(T&&(M.t===40||M.t===95)){const fr=38;for(const sp of M.t===40?[-.6,0,.6]:[0])monFire({kind:"lava",x:M.x,y:M.y-6,vx:Math.max(-5,Math.min(5,(T.x-M.x)/fr))+sp,vy:Math.max(-7,Math.min(3,(T.y-12-M.y)/fr-.15*fr/2))});sfx("spit");}
+    if(M.t>=150){M.st="plonge";M.t=0;}}
+  else if(M.st==="plonge"){M.y+=3.4;if(M.y>M.gy+60){M.st="sous";M.t=0;}}
+  else{ // sous terre : se rapproche d'une cible sans creuser
+    const gx=T?T.x:WW/2,dx=gx-M.x;M.x+=Math.sign(dx)*Math.min(Math.abs(dx),2.2);
+    const want=Math.min(WH-24,Math.min(LIQY,surfaceY(M.x,0))+55);M.y+=(want-M.y)*.08;
+    if(M.t%10===0){const sy=Math.min(LIQY,surfaceY(M.x,0));G.fx.push({x:M.x+(Math.random()-.5)*16,y:sy,vx:(Math.random()-.5),vy:-1-Math.random(),life:18,c:TH.pal.top,s:2});}
+    if(M.t>70&&(Math.abs(dx)<6||M.t>320)){M.st="surgit";M.t=0;}}
+  M.x=Math.max(16,Math.min(WW-16,M.x));
+  M.vx=M.x-px;M.vy=M.y-py;if(Math.abs(M.vx)>.1)M.f=M.vx>0?1:-1;
+  M.ang=M.st==="hurle"?-Math.PI/2+M.f*.35:(Math.abs(M.vx)+Math.abs(M.vy)>.05?Math.atan2(M.vy,M.vx):M.ang);
+  M.hist.unshift(M.x,M.y);if(M.hist.length>144)M.hist.length=144;M.seg=[];for(let i=6;i<M.hist.length/2;i+=6)M.seg.push(Math.round(M.hist[2*i]),Math.round(M.hist[2*i+1]));}
 function aiAraignee(M){
   if(M.st==="entree"){if(M.t===1)sfx("rumble");M.vy=2.4;M.vx=0;moveBody(M,16,22,0);
     if(M.onGround){M.st="chasse";M.t=0;M.sp++;G.shake=20;sfx("roar");for(let i=0;i<20;i++)G.fx.push({x:M.x+(Math.random()-.5)*40,y:M.y,vx:(Math.random()-.5)*3,vy:-Math.random()*2,life:30,c:"#a2a5cf",s:3});}
@@ -1073,7 +1079,7 @@ function drawVer(M){const s=M.seg;
     g.fillStyle=(G.t+k*5)%30<15?"#ff7a1a":"#ffb52e";g.fillRect(Math.round(x-2),Math.round(y-r+2),4,2);}
   g.save();g.translate(M.x,M.y);g.rotate(M.ang||0);
   g.fillStyle="#2a0d08";g.beginPath();g.arc(0,0,15,0,7);g.fill();g.fillStyle="#a03d1c";g.beginPath();g.arc(0,0,13.5,0,7);g.fill();
-  const o=3+Math.sin(G.t*.3)*3;g.fillStyle="#f2e6c9";
+  const o=M.st==="hurle"?8+Math.sin(G.t*.8)*2:3+Math.sin(G.t*.3)*3;g.fillStyle="#f2e6c9";
   g.beginPath();g.moveTo(8,-5-o);g.lineTo(22,-2-o*.4);g.lineTo(10,-1);g.fill();g.beginPath();g.moveTo(8,5+o);g.lineTo(22,2+o*.4);g.lineTo(10,1);g.fill();
   g.fillStyle=G.t%6<3?"#ff7a1a":"#ffe14a";g.beginPath();g.arc(9,0,4,0,7);g.fill();g.fillStyle="#ffe14a";g.fillRect(2,-9,3,3);g.fillRect(2,6,3,3);g.restore();}
 function drawAraignee(M){const x=M.x,y=M.y,f=M.f,t=G.t;
