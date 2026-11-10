@@ -624,8 +624,9 @@ const MONS={
   araignee:{nom:"TISSEUSE",sous:"L'ARAIGNÉE GÉANTE",col:"#c34cff",hp:.9},
   kaiju:{nom:"KRONODON",sous:"LE TITAN AU RAYON",col:"#ff3fa4",hp:1.3},
   mimic:{nom:"MIMIC",sous:"LA CAISSE QUI MORD",col:"#3fe0c4",hp:.8},
-  colosse:{nom:"COLOSSE",sous:"LE GÉANT DE FERRAILLE",col:"#c98a4a",hp:1.4}};
-const MONK=["ver","araignee","kaiju","mimic","colosse"];
+  colosse:{nom:"COLOSSE",sous:"LE GÉANT DE FERRAILLE",col:"#c98a4a",hp:1.4},
+  soucoupe:{nom:"SOUCOUPE PILLEUSE",sous:"LE WC VOLANT DES GLORBZ",col:"#a6e05a",hp:1.1}};
+const MONK=["ver","araignee","kaiju","mimic","colosse","soucoupe"];
 const ITEMS={soin:{nom:"+SOIN",c:"#3fe0c4"},vitesse:{nom:"VITESSE",c:"#ffd04a"},degats:{nom:"DÉGÂTS",c:"#ff5c7a"},bouclier:{nom:"BOUCLIER",c:"#7fd0ff"},jetpack:{nom:"JETPACK",c:"#ff9a3a"},mine:{nom:"MINES x3",c:"#c34cff"},grappin:{nom:"GRAPPIN x4",c:"#a6e05a"},composant:{nom:"COMPOSANT !",c:"#c9cfd6"},bouffe:{nom:"CONSERVE !",c:"#ff9a3a"},secret:{nom:"???",c:"#fff3b0"}};
 const ITK=Object.keys(ITEMS).filter(k=>!["composant","bouffe","secret"].includes(k));
 const MPROJ={
@@ -634,7 +635,9 @@ const MPROJ={
   bite:{w:26,h:26,dmg:12,pierce:true,life:6,col:"#ffffff"},
   mlaser:{w:8,h:3,dmg:4,pierce:true,drill:6,cr:6,col:"#ff3fa4",life:80},
   shock:{w:16,h:10,dmg:6,pierce:true,life:45,col:"#ffd04a"},
-  rock:{w:11,h:11,dmg:8,grav:.18,rad:18,col:"#8a7f70",life:320}};
+  rock:{w:11,h:11,dmg:8,grav:.18,rad:18,col:"#8a7f70",life:320},
+  plasma:{w:6,h:6,dmg:5,col:"#a6e05a",life:160},
+  dechet:{w:9,h:9,dmg:5,grav:.16,rad:16,col:"#7a5a2a",life:320}};
 const r1=v=>Math.round(v*10)/10;
 function rng(seed){let s=(seed>>>0)||1;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};}
 
@@ -841,7 +844,7 @@ function spawnWave(k,w){const old=G.mon;G.wave=w;G.mon=makeMonster(k,rng((G.seed
   for(const F of G.f)if(!F.remote&&!F.dead)F.hp=Math.min(F.maxHp,F.hp+F.maxHp*.3);
   addFeed(`Vague ${w} : ${MONS[k].nom} arrive !`);sfx("alarm");G.waveT=G.t;}
 const sk=by=>!by?null:by.isMon?"mon":by.isEnv?"env":G.online?(by.peer||null):"s"+by.side;
-function damage(T,dmg,dir,by,opt){opt=opt||{};if(T.remote||T.dead||G.phase!=="fight"||ally(by,T))return false;
+function damage(T,dmg,dir,by,opt){opt=opt||{};if(T.remote||T.dead||T.held||G.phase!=="fight"||ally(by,T))return false;
   if(T.shield>0){T.shield=Math.max(0,T.shield-90);T.inv=Math.max(T.inv,10);sfx("web");for(let i=0;i<8;i++){const an=i/8*Math.PI*2;G.fx.push({x:T.x+Math.cos(an)*14,y:T.y-11+Math.sin(an)*16,vx:Math.cos(an),vy:Math.sin(an),life:14,c:"#7fd0ff",s:2,ring:true});}return false;}
   if(opt.web){T.web=Math.max(T.web,opt.web);T.charge=0;}
   if(T.inv>0)return false;
@@ -883,7 +886,8 @@ function updFighter(F,inp,O){
   F.wasBlocked=F.blocked;F.blocked=false;
   if(F.buffS>0)F.buffS--;if(F.buffD>0)F.buffD--;if(F.web>0)F.web--;if(F.shield>0)F.shield--;if(F.jet>0)F.jet--;F.jetOn=false;
   const specP=inp.spec&&!pr.spec;
-  if(F.dead){F.hook=null;F.deadT++;F.vy=Math.min(F.y>LIQY?1:7,F.vy+.3);F.vx*=.9;moveBody(F);return;}
+  if(F.dead){F.hook=null;F.held=0;F.deadT++;F.vy=Math.min(F.y>LIQY?1:7,F.vy+.3);F.vx*=.9;moveBody(F);return;}
+  if(ufoStep(F,shootP))return;
   const webbed=F.web>0;
   let mv=0;if(F.stun>0)F.stun--;else if(!webbed){if(inp.left)mv--;if(inp.right)mv++;}
   if(F.dashCd>0)F.dashCd--;
@@ -921,7 +925,7 @@ function nearestTarget(F){let O=null,bd=1e9;for(const T of G.f){if(T===F||T.dead
   return O;}
 
 const DIFF=[{think:1.3,fire:.025,dodge:.04,charge:.15,jump:.01},{think:.9,fire:.05,dodge:.1,charge:.25,jump:.02},{think:.5,fire:.09,dodge:.22,charge:.35,jump:.035}];
-function aiInput(F){const d=DIFF[G.diff||1],A=F.ai,inp={};const O=nearestTarget(F);if(!O)return inp;
+function aiInput(F){const d=DIFF[G.diff||1],A=F.ai,inp={};if(F.held)return {shoot:!F.prev.shoot&&Math.random()<.25};const O=nearestTarget(F);if(!O)return inp;
   let goal=null;if(!F.foe)for(const it of G.items){const dd=Math.abs(it.x-F.x)+Math.abs(it.y-F.y);if(dd<220&&(F.hp<F.maxHp*.6||dd<100)){goal=it;break;}}
   const dx=O.x-F.x,adx=Math.abs(dx),dy=O.y-F.y,sg=Math.sign(dx)||1,pref=O.mon?140:WEAPONS[F.a.weapon].dist;
   if(--A.t<=0){A.t=(10+Math.random()*16)*d.think;
@@ -975,20 +979,22 @@ function makeMonster(k,r){const n=G.online?G.players.length:2;const mx=Math.roun
   if(k==="araignee"){M.x=Math.round(WW*(.35+r()*.3));M.y=-140;}
   if(k==="kaiju"){const s=r()<.5?-1:1;M.x=s<0?-70:WW+70;M.f=-s;M.y=surfaceY(s<0?6:WW-6,0);}
   if(k==="mimic"){M.x=findGround(Math.round(WW/2+(r()-.5)*500));M.y=-40;M.cd=150;M.cd2=90;}
+  if(k==="soucoupe"){M.x=Math.round(WW*(.3+r()*.4));M.y=-90;M.sh=1;M.cd=200;M.cd2=90;}
   if(k==="colosse"){M.x=findGround(Math.round(WW/2+(r()-.5)*400));M.y=surfaceY(M.x,0);M.sc=1;M.cd=120;M.cd2=160;M.cd3=360;}
   return M;}
 const mHid=M=>M.k==="mimic"&&(M.st==="cache"||M.st==="chute"||M.st==="entree");
 function monCircles(M){if(M.st==="attente")return [];
   if(M.k==="mimic")return mHid(M)?[{x:M.x,y:M.y-6,r:8}]:M.st==="saute"&&M.y<0?[]:[{x:M.x,y:M.y-18,r:18}];
+  if(M.k==="soucoupe")return M.st==="entree"&&M.y<40?[]:[{x:M.x,y:M.y,r:42},{x:M.x,y:M.y-20,r:18}];
   if(M.k==="colosse"){const s=M.sc||1;if(M.st==="entree"&&M.t<90)return [];return [{x:M.x+M.f*4*s,y:M.y-72*s,r:10*s},{x:M.x,y:M.y-46*s,r:22*s},{x:M.x,y:M.y-14*s,r:14*s}];}
   if(M.k==="ver"){const c=[{x:M.x,y:M.y,r:13}];for(let i=0;i+1<M.seg.length;i+=2)c.push({x:M.seg[i],y:M.seg[i+1],r:10});return c;}
   if(M.k==="araignee")return [{x:M.x-M.f*8,y:M.y-18,r:16},{x:M.x+M.f*9,y:M.y-14,r:10}];
   return [{x:M.x+M.f*20,y:M.y-72,r:14},{x:M.x,y:M.y-42,r:22},{x:M.x,y:M.y-14,r:15}];}
-function monHit(d,by){G.monDmg+=d;G.mon.flash=6;const k=sk(by)||(G.online?G.me.peer:null);if(k){G.monBy[k]=(G.monBy[k]||0)+d;G.monLast=k;}}
+function monHit(d,by){if(G.mon&&G.mon.k==="soucoupe"&&G.mon.sh&&!(by&&by.held)){G.mon.flash=0;G.mon.shF=8;return;}G.monDmg+=d;G.mon.flash=6;const k=sk(by)||(G.online?G.me.peer:null);if(k){G.monBy[k]=(G.monBy[k]||0)+d;G.monLast=k;}}
 function totalMonDmg(){let s=G.monDmg;if(G.online)for(const k in G.remoteMd)s+=G.remoteMd[k];return s;}
 function monFire(o){if(!isAuth())return;const M=G.mon;G.proj.push(mkProj(Object.assign({owner:M},MPROJ[o.kind],o)));
   if(G.online)G.monShots.push({i:++G.msN,k:o.kind,x:r1(o.x),y:r1(o.y),vx:r1(o.vx||0),vy:r1(o.vy||0),t:G.t});}
-function monTarget(M,preferWeb){let best=null,bd=1e9;for(const F of G.f){if(F.dead||F.foe)continue;let d=Math.abs(F.x-M.x)+Math.abs(F.y-M.y);if(preferWeb&&F.web>0)d*=.4;if(d<bd){bd=d;best=F;}}return best;}
+function monTarget(M,preferWeb){let best=null,bd=1e9;for(const F of G.f){if(F.dead||F.foe||F.held)continue;let d=Math.abs(F.x-M.x)+Math.abs(F.y-M.y);if(preferWeb&&F.web>0)d*=.4;if(d<bd){bd=d;best=F;}}return best;}
 function groundFollow(M){const gy=Math.min(LIQY,surfaceY(M.x,M.y-14));if(gy>M.y+1){M.vy=(M.vy||0)+.3;const ny=Math.min(gy,M.y+M.vy);if(ny>=gy)M.vy=0;return ny;}M.vy=0;return gy;}
 // Vermagma : vit sous terre sans creuser, surgit sous un robot, se dresse et hurle, crache, puis replonge dans son trou.
 function aiVer(M){const T=monTarget(M),px=M.x,py=M.y,P=pilotIn();if(P)M.cdP=Math.max(0,(M.cdP||0)-1);
@@ -1061,7 +1067,44 @@ function updMonster(){const M=G.mon;if(!M)return;M.t++;if(M.flash>0)M.flash--;
   if(M.dead){M.deadT++;monDeathFx(M);return;}
   if(M.st!=="attente"){M.hp=Math.max(0,M.mx-(totalMonDmg()-(M.base||0)));if(M.hp<=0&&G.phase==="fight"){M.dead=true;M.deadT=0;G.monKiller=G.monLast;sfx("roar");G.shake=26;addFeed(`${MONS[M.k].nom} est vaincu !`);return;}}
   if(M.st==="attente"){if(G.phase!=="intro"||G.pt>=70){M.st="entree";M.t=0;sfx("roar");}else return;}
-  ({ver:aiVer,araignee:aiAraignee,kaiju:aiKaiju,mimic:aiMimic,colosse:aiColosse})[M.k](M);}
+  ({ver:aiVer,araignee:aiAraignee,kaiju:aiKaiju,mimic:aiMimic,colosse:aiColosse,soucoupe:aiSoucoupe})[M.k](M);}
+// Soucoupe pilleuse : plane derrière un bouclier, aspire objets et robots avec son rayon tracteur.
+// Un prisonnier dans la soute tire sur le réacteur : le bouclier tombe quelques secondes. À mi-vie, elle vidange ses toilettes sur l'arène.
+const UFO=()=>{const M=G&&G.mon;return M&&M.k==="soucoupe"&&!M.dead&&M.st!=="attente"?M:null;};
+const inBeam=(M,x,y)=>M.st==="rayon"&&M.t>20&&y>M.y+14&&Math.abs(x-M.x)<17+(y-M.y)*.28;
+function ufoStep(F,shootP){const M=UFO();
+  if(!M){if(F.held){F.held=0;F.vy=0;}return false;}
+  if(F.held){F.held++;F.x=M.x+((F.slot||0)-1)*9;F.y=M.y-12;F.vx=0;F.vy=0;F.inv=Math.max(F.inv,2);F.charge=0;
+    if(shootP){sfx("zap");G.shake=Math.max(G.shake,3);for(let i=0;i<5;i++)G.fx.push({x:M.x,y:M.y+4,vx:(Math.random()-.5)*3,vy:Math.random()*2,life:14,c:"#a6e05a",s:2});
+      if(!G.online||isAuth())ufoReactor(M);else G.rhN=(G.rhN||0)+1;monHit(1,F);}
+    if(M.st==="vidange"||F.held>900){F.held=0;F.vy=1;F.inv=60;F.y=M.y+34;addFeed(`${F.a.nom} est recraché !`);}
+    return true;}
+  if(inBeam(M,F.x,F.y-10)&&!F.dead){F.lift=(F.lift||0)+1;if(F.lift>25){F.y-=2.6;F.x+=(M.x-F.x)*.06;F.vx=0;F.vy=0;F.onGround=false;F.charge=0;if(F.t%3===0)G.fx.push({x:F.x+(Math.random()-.5)*10,y:F.y,vx:0,vy:-1,life:12,c:"#c8ff7a",s:2});
+      if(F.y<M.y+40){F.held=1;F.lift=0;F.slot=G.f.filter(T=>T.held).length%3;sfx("power");addFeed(`${F.a.nom} est aspiré dans la soucoupe !`);}return true;}}
+  else F.lift=0;
+  return false;}
+function ufoReactor(M){if(M.sh){M.sh=0;M.shOff=300;sfx("boom");G.shake=14;addFeed("Le bouclier de la soucoupe tombe !");}else M.shOff=Math.max(M.shOff,300);}
+function aiSoucoupe(M){const T=monTarget(M),P=pilotIn();if(P)M.cdP=Math.max(0,(M.cdP||0)-1);
+  const gy=T?T.y:Math.min(LIQY,surfaceY(M.x,0));M.hy=M.hy===undefined?gy-170:M.hy+(gy-170-M.hy)*.01;const hover=Math.max(70,Math.min(WH-260,M.hy))+Math.sin(M.t*.02)*14;
+  if(M.st==="entree"){M.y+=(hover-M.y)*.03;if(M.t%30===0)sfx("alarm");if(M.t>=200){M.st="vol";M.t=0;}return;}
+  if(M.shOff>0){M.shOff--;if(M.shOff===0){M.sh=1;sfx("power");}}
+  if(G.netG)for(const [pp,q] of G.netG){const n=num(q&&q.rh,0);if(n>(G.prevRh&&G.prevRh[pp]||0)){G.prevRh=G.prevRh||{};G.prevRh[pp]=n;ufoReactor(M);}}
+  if(!M.dumped&&M.hp<=M.mx*.5){M.dumped=1;M.st="vidange";M.t=0;sfx("rumble");G.shake=20;addFeed("La soucoupe vidange ses toilettes sur l'arène !");}
+  if(M.st==="vidange"){M.y+=(hover-30-M.y)*.05;if(M.t%5===0)monFire({kind:"dechet",x:M.x+(Math.random()-.5)*30,y:M.y+14,vx:(Math.random()-.5)*7,vy:-1-Math.random()*2});
+    if(M.t%40===0){const x=60+Math.random()*(WW-120);monFire({kind:"dechet",x,y:-10,vx:(Math.random()-.5),vy:1});}
+    if(M.t>=240){M.st="vol";M.t=0;}return;}
+  M.y+=(hover-M.y)*.05;
+  if(M.st==="rayon"){M.vx*=.9;M.x+=M.vx;
+    if(isAuth())for(const it of G.items){if(G.taken.has(it.id))continue;if(inBeam(M,it.x,it.y)){it.y-=2.4;it.vy=0;if(it.y<M.y+20){G.taken.add(it.id);G.myTaken.push({id:it.id,t:G.t});colHeal(M,.02);sfx("power");}}}
+    if(M.t>=(P?160:210)){M.st="vol";M.t=0;M.cd=P?90:260;}return;}
+  M.cd--;M.cd2--;
+  if(P){M.vx+=(P.x*2.2-M.vx)*.08;if(P.x)M.f=P.x;
+    if(P.jp&&M.cd<=0){M.st="rayon";M.t=0;sfx("charge");}
+    if((P.a||P.d)&&M.cdP<=0&&T){M.cdP=28;const dx=T.x-M.x,dy=T.y-12-(M.y+12),d=Math.hypot(dx,dy)||1;monFire({kind:"plasma",x:M.x,y:M.y+12,vx:dx/d*3.6,vy:dy/d*3.6});sfx("zap");}}
+  else{const gx=T?T.x:WW/2;M.vx+=(Math.sign(gx-M.x)*1.5*(Math.abs(gx-M.x)>20?1:0)-M.vx)*.05;M.f=M.vx>0?1:-1;
+    if(T&&M.cd<=0&&Math.abs(T.x-M.x)<40){M.st="rayon";M.t=0;sfx("charge");}
+    if(T&&M.cd2<=0){M.cd2=80+Math.random()*50;const dx=T.x-M.x,dy=T.y-12-(M.y+12),d=Math.hypot(dx,dy)||1;monFire({kind:"plasma",x:M.x,y:M.y+12,vx:dx/d*3.4,vy:dy/d*3.4});sfx("zap");}}
+  M.x=Math.max(40,Math.min(WW-40,M.x+M.vx));}
 // Mimic : tombe du ciel au milieu d'une pluie de caisses de soin, déguisé en caisse. Se révèle si on le touche ou si on lui tire dessus.
 function mimicCrates(cx,n){if(!isAuth())return;for(let i=0;i<n;i++)G.items.push({id:"k"+Math.random().toString(36).slice(2,8),k:"soin",x:Math.max(30,Math.min(WW-30,cx+(i-(n-1)/2)*(560/n)+(Math.random()-.5)*30)),y:-20-Math.random()*90,vy:.5});}
 function mimicFall(M){if(!solid(M.x,M.y+1)&&M.y<LIQY){M.y+=1.1;return false;}while(M.y>0&&solid(M.x,M.y))M.y--;return true;}
@@ -1122,7 +1165,7 @@ function aiColosse(M){const T=monTarget(M),P=pilotIn();M.pow=colPow();M.sc=1+.3*
 function netMonster(M){const n=G.monNet;if(M.dead){M.deadT++;monDeathFx(M);}if(!n)return;
   if(n.st!==M.st&&M.st==="attente")sfx("roar");
   if(num(n.sp,0)!==M.sp){G.shake=Math.max(G.shake,12);sfx("stomp");M.sp=num(n.sp,0);}
-  M.st=typeof n.st==="string"?n.st.slice(0,10):M.st;M.f=n.f<0?-1:1;M.ang=num(n.a,0);M.bite=num(n.bt,0);if(n.sc)M.sc=Math.max(1,Math.min(1.4,num(n.sc,1)));M.pow=1+(M.sc-1)/.3||1;
+  M.st=typeof n.st==="string"?n.st.slice(0,10):M.st;M.f=n.f<0?-1:1;M.ang=num(n.a,0);M.bite=num(n.bt,0);if(n.sc)M.sc=Math.max(1,Math.min(1.4,num(n.sc,1)));M.sh=n.sh?1:0;M.pow=1+(M.sc-1)/.3||1;
   const nx=num(n.x,M.x),ny=num(n.y,M.y),far=Math.abs(nx-M.x)>80||Math.abs(ny-M.y)>80;M.x=far?nx:M.x+(nx-M.x)*.35;M.y=far?ny:M.y+(ny-M.y)*.35;
   if(Array.isArray(n.seg))M.seg=n.seg.slice(0,40).map(v=>num(v,0));
   M.mx=Math.max(1,num(n.mx,M.mx));M.hp=Math.max(0,Math.min(M.mx,num(n.hp,M.hp)));
@@ -1132,7 +1175,7 @@ function monContact(){const M=G.mon;if(!M||M.dead||M.st==="attente"||G.phase!=="
 
 // ---------- Projectiles ----------
 function terrainHit(p){const k=p.kind,o=ownsLocally(p.owner);
-  if(k==="bomb"||k==="lava"){explode(p);p.dead=true;return;}
+  if(k==="bomb"||k==="lava"||k==="rock"||k==="dechet"){explode(p);p.dead=true;return;}
   if(k==="web"){p.dead=true;for(let i=0;i<6;i++)G.fx.push({x:p.x,y:p.y,vx:(Math.random()-.5)*2,vy:(Math.random()-.5)*2,life:20,c:"#efeaff",s:2});return;}
   if(o)doCarve(p.x,p.y,p.cr||4,true);else if(G.fx.length<450)G.fx.push({x:p.x,y:p.y,vx:0,vy:-1,life:12,c:"#8a94e6",s:2});
   if(p.drill!==undefined){if(--p.drill<=0)p.dead=true;return;}
@@ -1145,7 +1188,7 @@ function updProj(){const M=G.mon;
     if(p.kind!=="shock"&&p.kind!=="bite"&&solid(p.x,p.y)){terrainHit(p);if(p.dead)continue;}
     for(const T of G.f){if(T===p.owner||T.dead||p.hits.has(T)||ally(p.owner,T))continue;
       if(Math.abs(p.x-T.x)<5+p.w/2&&p.y+p.h/2>T.y-21&&p.y-p.h/2<T.y){
-        if(p.kind==="bomb"||p.kind==="lava"){explode(p);p.dead=true;break;}
+        if(["bomb","lava","rock","dechet"].includes(p.kind)){explode(p);p.dead=true;break;}
         if(T.inv>0&&p.kind!=="web")continue;
         if(!T.remote)damage(T,p.dmg,Math.sign(p.vx)||1,p.owner,{web:p.web});
         p.hits.add(T);if(!p.pierce){p.dead=true;break;}}}
@@ -1460,7 +1503,18 @@ function drawKaiju(M){const x=Math.round(M.x),y=Math.round(M.y),f=M.f;const P=(p
   if(M.st==="rayon"){g.fillStyle=G.t%4<2?"#fff":C;g.beginPath();g.arc(x+f*34,y-66,6,0,7);g.fill();}}
 function drawMonster(M,ghost){if(M.st==="attente")return;if(M.dead&&M.deadT>100)return;
   g.globalAlpha=ghost?.28:(M.dead?Math.max(0,1-M.deadT/100):(M.flash>0&&M.flash%2?.55:1));
-  if(M.k==="ver")drawVer(M);else if(M.k==="araignee")drawAraignee(M);else if(M.k==="mimic")drawMimic(M);else if(M.k==="colosse")drawColosse(M);else drawKaiju(M);g.globalAlpha=1;}
+  if(M.k==="ver")drawVer(M);else if(M.k==="araignee")drawAraignee(M);else if(M.k==="mimic")drawMimic(M);else if(M.k==="colosse")drawColosse(M);else if(M.k==="soucoupe")drawSoucoupe(M);else drawKaiju(M);g.globalAlpha=1;}
+function drawSoucoupe(M){const x0=Math.round(M.x),y0=Math.round(M.y),t=G.t;g.save();g.translate(x0,y0);g.scale(1.4,1.4);const x=0,y=0;
+  if(M.st==="rayon"&&M.t>8){const L=(WH-y0)/1.4;g.globalAlpha*=.28+.08*Math.sin(t*.4);g.fillStyle="#c8ff7a";g.beginPath();g.moveTo(x-10,y+10);g.lineTo(x+10,y+10);g.lineTo(x+12+L*.28,y+L);g.lineTo(x-12-L*.28,y+L);g.fill();g.globalAlpha/=(.28+.08*Math.sin(t*.4));
+    g.fillStyle="#efffd0";for(let i=0;i<8;i++){const yy=y+14+((t*3+i*37)%220);g.fillRect(x-6+(i%3)*5,yy,2,3);}}
+  if(M.st==="vidange"){g.fillStyle="#7a5a2a";g.fillRect(x-6,y+10,12,8+Math.sin(t*.6)*3);}
+  const P=(px,py,w,h,c)=>{g.fillStyle=c;g.fillRect(x+px,y+py,w,h);};
+  P(-14,-24,28,1,"#0a0a16");P(-14,-24,1,16,"#0a0a16");P(13,-24,1,16,"#0a0a16");P(-13,-23,26,15,"#7fd0ff33");P(-10,-22,6,3,"#ffffff88");
+  P(-36,-8,72,14,"#0a0a16");P(-34,-7,68,11,"#c9cfd6");P(-34,-7,68,3,"#ffffff");P(-28,0,56,4,"#8B939C");
+  P(-12,4,24,6,"#0a0a16");P(-10,4,20,5,"#a6e05a");P(-4,6,8,2,M.sh?"#e8ffd0":"#ff5c2a");
+  for(let i=0;i<6;i++){const on=(Math.floor(t/6)+i)%3===0;P(-30+i*11,-3,4,3,on?"#ffd04a":"#5a5f68");}
+  P(18,-14,10,6,"#efe2c0");P(20,-16,6,2,"#efe2c0"); // la cuvette, bien sûr
+  if(M.sh){const a=.25+.1*Math.sin(t*.2)+(M.shF>0?.3:0);if(M.shF>0)M.shF--;g.strokeStyle=`rgba(166,224,90,${a})`;g.lineWidth=2;g.beginPath();g.ellipse(x,y-6,44,26,0,0,7);g.stroke();}g.restore();}
 function drawMimic(M){const x=Math.round(M.x),y=Math.round(M.y),f=M.f;
   if(mHid(M)){drawItem({k:"soin",x,y,vy:M.st==="cache"?0:1});if(M.st==="cache"&&G.t%260<7){g.fillStyle="#ffd04a";g.fillRect(x-3,y-8,1,1);g.fillRect(x+2,y-8,1,1);}return;}
   const P=(px,py,w,h,c)=>{g.fillStyle=c;g.fillRect(f>0?x+px:x-px-w,y+py,w,h);};
@@ -1511,6 +1565,8 @@ function drawProj(p){const x=p.x,y=p.y;
   if(p.kind==="web"){g.strokeStyle="#efeaff";g.lineWidth=1;g.beginPath();for(let i=0;i<4;i++){const a=i*Math.PI/4;g.moveTo(x-Math.cos(a)*5,y-Math.sin(a)*5);g.lineTo(x+Math.cos(a)*5,y+Math.sin(a)*5);}g.stroke();return;}
   if(p.kind==="bite"){g.strokeStyle="#ffffff";g.lineWidth=2;for(let i=-1;i<=1;i++){g.beginPath();g.moveTo(x-10,y-8+i*6);g.lineTo(x+10,y-2+i*6);g.stroke();}return;}
   if(p.kind==="mlaser"){const d=Math.hypot(p.vx,p.vy)||1,ux=p.vx/d,uy=p.vy/d;g.strokeStyle="#ff3fa4";g.lineWidth=4;g.beginPath();g.moveTo(x-ux*12,y-uy*12);g.lineTo(x,y);g.stroke();g.strokeStyle="#ffffff";g.lineWidth=1.5;g.stroke();return;}
+  if(p.kind==="dechet"){g.fillStyle="#3a2510";g.beginPath();g.arc(x,y,5,0,7);g.fill();g.fillStyle="#7a5a2a";g.beginPath();g.arc(x-1,y-1,3.5,0,7);g.fill();g.fillStyle="#a6e05a88";g.fillRect(x+1,y-6-(G.t%6),1,2);return;}
+  if(p.kind==="rock"){g.fillStyle="#0a0a16";g.fillRect(x-6,y-6,12,12);g.fillStyle="#7a6552";g.fillRect(x-5,y-5,10,10);g.fillStyle="#8B939C";g.fillRect(x-5,y-5,10,2);return;}
   if(p.kind==="shock"){g.fillStyle=G.t%4<2?"#ffd04a":"#ffffff";g.fillRect(x-8,y-2,16,3);g.fillRect(x-5,y-6,10,4);return;}
   if(p.big&&!p.pierce){g.fillStyle=p.col;g.beginPath();g.arc(x,y,6+(G.t%4<2?1:0),0,7);g.fill();g.fillStyle="#ffffff";g.beginPath();g.arc(x,y,3,0,7);g.fill();return;}
   g.fillStyle=p.col;g.fillRect(Math.round(x-p.w/2),Math.round(y-p.h/2),p.w,p.h);g.fillStyle="#ffffff";g.fillRect(Math.round(x-p.w/2)+1,Math.round(y-p.h/2)+(p.h>2?1:0),Math.max(1,p.w-2),Math.max(1,p.h-2));}
@@ -1575,7 +1631,7 @@ let specVis=false;function render(){const hold=G.online?G.me:G.f[0];const sv=!!(
     if(M){const a=G.pt<200&&G.pt%20<10;if(a){g.fillStyle="#ff2d5555";g.fillRect(0,0,VW,VH);}
       g.fillStyle="#ff2d55";for(let x=-20+(G.pt%20);x<VW;x+=20){g.fillRect(x,0,10,6);g.fillRect(x,VH-6,10,6);}
       if(G.pt<120)txt("ALERTE MONSTRE",VW/2,70,14,G.pt%20<10?"#ff2d55":"#ffffff");
-      else if(G.pt<G.introLen-40){txt(MONS[M.k].nom,VW/2,60,20,MONS[M.k].col);txt(MONS[M.k].sous,VW/2,88,7,"#ecebff");if(M.k==="mimic")txt("UNE DE CES CAISSES DE SOIN N'EN EST PAS UNE…",VW/2,116,5,"#3fe0c4");if(M.k==="colosse")txt("PLUS L'ARÈNE EST DÉTRUITE, PLUS IL EST FORT",VW/2,116,5,"#c98a4a");txt(G.rule==="vagues"?"COOP : TENEZ LE PLUS DE VAGUES POSSIBLE":G.pilot?(G.pilot===G.me.peer?"C'EST TOI QUI LE CONTRÔLES ! ÉLIMINE TOUS LES ROBOTS":`PILOTÉ PAR ${peerName(G.pilot).toUpperCase()} : ABATTEZ-LE ENSEMBLE`):"TUEZ-LE ENSEMBLE : S'IL TOMBE, TOUT LE MONDE GAGNE",VW/2,104,5,"#ffb52e");}
+      else if(G.pt<G.introLen-40){txt(MONS[M.k].nom,VW/2,60,20,MONS[M.k].col);txt(MONS[M.k].sous,VW/2,88,7,"#ecebff");if(M.k==="mimic")txt("UNE DE CES CAISSES DE SOIN N'EN EST PAS UNE…",VW/2,116,5,"#3fe0c4");if(M.k==="colosse")txt("PLUS L'ARÈNE EST DÉTRUITE, PLUS IL EST FORT",VW/2,116,5,"#c98a4a");if(M.k==="soucoupe")txt("BOUCLIER ! LAISSE-TOI ASPIRER ET TIRE SUR LE RÉACTEUR DE L'INTÉRIEUR",VW/2,116,5,"#a6e05a");txt(G.rule==="vagues"?"COOP : TENEZ LE PLUS DE VAGUES POSSIBLE":G.pilot?(G.pilot===G.me.peer?"C'EST TOI QUI LE CONTRÔLES ! ÉLIMINE TOUS LES ROBOTS":`PILOTÉ PAR ${peerName(G.pilot).toUpperCase()} : ABATTEZ-LE ENSEMBLE`):"TUEZ-LE ENSEMBLE : S'IL TOMBE, TOUT LE MONDE GAGNE",VW/2,104,5,"#ffb52e");}
       else txt("PRÊTS ?",VW/2,90,12,"#ffb52e");}
     else{txt(G.st?`CHAPITRE ${G.st.lv.ch} · NIVEAU ${G.st.lv.id}`:`ARÈNE : ${TH.nom.toUpperCase()}`,VW/2,62,7,"#3fe0c4");txt(G.st?G.st.lv.nom.toUpperCase():G.online?`${G.players.length} ROBOTS`:`MANCHE ${G.round}`,VW/2,80,14,"#ecebff");if(G.pt>40)txt("PRÊTS ?",VW/2,104,10,"#ffb52e");}}
   if(G.phase==="fight"&&G.pt<40)txt("COMBAT !",VW/2,90,16,"#ffb52e");
@@ -1684,11 +1740,11 @@ function remoteState(F,q){if(isPilotF(F)){pilotPark(F);return;}
   F.vx=num(q.vx,0);F.face=q.f<0?-1:1;
   const hp=Math.max(0,num(q.hp,F.hp));if(hp<F.hp-.01){for(let i=0;i<8;i++)G.fx.push({x:F.x,y:F.y-12,vx:(Math.random()-.5)*4,vy:(Math.random()-.8)*3,life:18,c:i%2?"#ffffff":F.a.prim,s:2});}
   F.hp=hp;F.maxHp=Math.max(1,num(q.mx,F.maxHp));F.inv=num(q.inv,0);F.charge=num(q.ch,0);F.shootAnim=num(q.sa,0);F.onGround=!!q.og;F.dashT=num(q.dt,0);F.stun=num(q.st,0);
-  F.buffS=q.bf&1?2:0;F.buffD=q.bf&2?2:0;F.web=q.wb?2:0;F.shield=q.bf&4?2:0;F.jetOn=!!(q.bf&8);F.hook=Array.isArray(q.hk)?{x:clampX(num(q.hk[0],F.x)),y:clampY(num(q.hk[1],F.y)),st:"pull"}:null;
+  F.buffS=q.bf&1?2:0;F.buffD=q.bf&2?2:0;F.web=q.wb?2:0;F.shield=q.bf&4?2:0;F.jetOn=!!(q.bf&8);F.held=q.bf&16?1:0;F.hook=Array.isArray(q.hk)?{x:clampX(num(q.hk[0],F.x)),y:clampY(num(q.hk[1],F.y)),st:"pull"}:null;
   if(q.d&&!F.dead){F.dead=true;F.deadT=0;sfx("ko");koFx(F);const kb=typeof q.kb==="string"?q.kb.slice(0,40):null;F.remoteKb=kb;
     addFeed(kb===G.me.peer?`Tu as éliminé ${F.a.nom} !`:kb==="mon"&&G.mon?`${MONS[G.mon.k].nom} a éliminé ${F.a.nom}`:`${F.a.nom} est éliminé`);}}
 function botState(F){return {id:F.peer,fo:F.foe||undefined,cfg:{nom:F.a.nom,prim:F.a.prim,sec:F.a.sec,visor:F.a.visor,helmet:F.a.helmet,weapon:F.a.weapon,sk:F.a.sk,toast:F.a.toast,stats:F.a.stats},x:r1(F.x),y:r1(F.y),vx:r1(F.vx),vy:r1(F.vy),n:G.t,f:F.face,hp:r1(F.hp),mx:F.maxHp,inv:F.inv,ch:F.charge,sa:F.shootAnim,og:F.onGround?1:0,dt:F.dashT,st:F.stun,d:F.dead?1:0,kb:F.kb||null,
-  bf:(F.buffS>0?1:0)|(F.buffD>0?2:0)|(F.shield>0?4:0)|(F.jetOn?8:0),wb:F.web>0?1:0,hk:F.hook?[r1(F.hook.x),r1(F.hook.y)]:null};}
+  bf:(F.buffS>0?1:0)|(F.buffD>0?2:0)|(F.shield>0?4:0)|(F.jetOn?8:0)|(F.held?16:0),wb:F.web>0?1:0,hk:F.hook?[r1(F.hook.x),r1(F.hook.y)]:null};}
 function syncNet(){const peers=NET.r.peers();const seenB=new Set();const present=new Set([G.me.peer]);G.remoteMd={};
   for(const p of peers){if(p.sameTab||!G.players.includes(p.peer))continue;const pr=p.presence||{};if(pr.st!=="play")continue;present.add(p.peer);
     const q=pr.g;if(!q||typeof q!=="object"||q.m!==G.matchId)continue;G.netG.set(p.peer,q);
@@ -1723,11 +1779,12 @@ function syncNet(){const peers=NET.r.peers();const seenB=new Set();const present
 function sendNet(){const me=G.me,t=G.t;
   G.myShots=G.myShots.filter(s=>t-s.t<42);G.myCraters=G.myCraters.filter(c=>t-c.t<90).slice(-48);G.myTaken=G.myTaken.filter(x=>t-x.t<180);G.monShots=G.monShots.filter(s=>t-s.t<42).slice(-30);
   const q={m:G.matchId,n:t,x:r1(me.x),y:r1(me.y),vx:r1(me.vx),vy:r1(me.vy),f:me.face,hp:r1(me.hp),mx:me.maxHp,inv:me.inv,ch:me.charge,sa:me.shootAnim,og:me.onGround?1:0,dt:me.dashT,st:me.stun,d:me.dead?1:0,kb:me.kb||null,
-    bf:(me.buffS>0?1:0)|(me.buffD>0?2:0)|(me.shield>0?4:0)|(me.jetOn?8:0),hk:me.hook?[r1(me.hook.x),r1(me.hook.y)]:null,mn:G.mines.filter(m=>m.local).slice(0,8).map(m=>[m.id,Math.round(m.x),Math.round(m.y)]),wb:me.web>0?1:0,s:G.myShots.map(s=>({i:s.i,x:s.x,y:s.y,f:s.f,a:s.a,b:s.b,d:s.d,o:s.o})),c:G.myCraters.map(c=>[c.i,c.x,c.y,c.r]),tk:G.myTaken.map(x=>x.id),md:r1(G.monDmg),rx:Object.fromEntries(Object.entries(G.dealt).slice(0,12).map(([k,v])=>[k,Math.round(v)]))};
+    bf:(me.buffS>0?1:0)|(me.buffD>0?2:0)|(me.shield>0?4:0)|(me.jetOn?8:0)|(me.held?16:0),hk:me.hook?[r1(me.hook.x),r1(me.hook.y)]:null,mn:G.mines.filter(m=>m.local).slice(0,8).map(m=>[m.id,Math.round(m.x),Math.round(m.y)]),wb:me.web>0?1:0,s:G.myShots.map(s=>({i:s.i,x:s.x,y:s.y,f:s.f,a:s.a,b:s.b,d:s.d,o:s.o})),c:G.myCraters.map(c=>[c.i,c.x,c.y,c.r]),tk:G.myTaken.map(x=>x.id),md:r1(G.monDmg),rx:Object.fromEntries(Object.entries(G.dealt).slice(0,12).map(([k,v])=>[k,Math.round(v)]))};
   const bots=G.f.filter(F=>F.isBot&&!F.remote);if(bots.length)q.bots=bots.map(botState);
+  if(G.rhN)q.rh=G.rhN;
   if(G.pilot===me.peer){q.mi=pilotBits(readInput(0,true))|(G.miAcc||0);G.miAcc=0;}
   if(isAuth()){if(G.st&&G.st.win)q.sw=1;q.it=G.items.slice(0,24).map(it=>({id:it.id,k:it.k,x:Math.round(it.x),y:Math.round(it.y)}));
-    const M=G.mon;if(M){q.mo={k:M.k,x:r1(M.x),y:r1(M.y),f:M.f,st:M.st,a:Math.round((M.ang||0)*100)/100,hp:r1(M.hp),mx:M.mx,d:M.dead?1:0,w:G.wave||0,lk:M.dead?G.monKiller:null,sp:M.sp,bt:M.bite||0,sc:M.sc?Math.round(M.sc*100)/100:undefined,seg:M.seg.slice(0,40)};
+    const M=G.mon;if(M){q.mo={k:M.k,x:r1(M.x),y:r1(M.y),f:M.f,st:M.st,a:Math.round((M.ang||0)*100)/100,hp:r1(M.hp),mx:M.mx,d:M.dead?1:0,w:G.wave||0,lk:M.dead?G.monKiller:null,sp:M.sp,bt:M.bite||0,sc:M.sc?Math.round(M.sc*100)/100:undefined,sh:M.sh?1:0,seg:M.seg.slice(0,40)};
       q.ms=G.monShots.map(s=>[s.i,s.k,s.x,s.y,s.vx,s.vy]);}}
   NET.r.presence({g:q}).catch(()=>{});}
 function onlineHud(){
@@ -1741,7 +1798,7 @@ function onlineHud(){
   if(G.rule==="vagues")txt(`VAGUE ${G.wave}`,VW-6,203,7,"#ffb52e","right");
   else if(!G.mon&&!G.st){const sec=Math.max(0,Math.ceil(G.timer/60));txt(String(sec),VW-6,203,7,sec<=10?"#ff5c7a":"#ecebff","right");}
   if(G.pilot&&G.mon){const me=G.pilot===G.me.peer;if(G.phase==="fight"&&G.pt<400)txt(me?"TU ES LE MONSTRE ! ÉLIMINE TOUS LES ROBOTS":`${peerName(G.pilot).toUpperCase()} CONTRÔLE LE MONSTRE`,VW/2,G.st?50:40,6,MONS[G.mon.k].col);
-    if(me&&G.phase==="fight"){txt({ver:"← → RAMPER · SAUT : SURGIR · TIR : CRACHER · DASH : REPLONGER",araignee:"← → MARCHER · SAUT · TIR : TOILE · DASH : MORSURE",kaiju:"← → MARCHER · TIR : RAYON · SAUT : SAUT ÉCRASANT",mimic:G.mon.st==="cache"?"CACHÉ · TIR : TE RÉVÉLER ET MORDRE":"← → SAUTILLER · SAUT : BOND · TIR : LANGUE · DASH : TE CACHER",colosse:"← → MARCHER · TIR : LANCER UN ROC · SAUT : FRAPPE AU SOL · DASH : SE RÉPARER"}[G.mon.k],VW/2,192,5,"#ecebff");}}
+    if(me&&G.phase==="fight"){txt({ver:"← → RAMPER · SAUT : SURGIR · TIR : CRACHER · DASH : REPLONGER",araignee:"← → MARCHER · SAUT · TIR : TOILE · DASH : MORSURE",kaiju:"← → MARCHER · TIR : RAYON · SAUT : SAUT ÉCRASANT",mimic:G.mon.st==="cache"?"CACHÉ · TIR : TE RÉVÉLER ET MORDRE":"← → SAUTILLER · SAUT : BOND · TIR : LANGUE · DASH : TE CACHER",colosse:"← → MARCHER · TIR : LANCER UN ROC · SAUT : FRAPPE AU SOL · DASH : SE RÉPARER",soucoupe:"← → VOLER · SAUT : RAYON TRACTEUR · TIR : PLASMA"}[G.mon.k],VW/2,192,5,"#ecebff");}}
   if(G.phase==="fight"&&G.me.dead&&G.pilot!==G.me.peer){txt(G.mon?"ÉLIMINÉ · TES AMIS CONTINUENT LE COMBAT":"ÉLIMINÉ · TU REGARDES LA FIN",VW/2,60,6,"#ff5c7a");
     if(G.spec)txt(`SPECTATEUR : ${G.spec.a.nom.toUpperCase()} · TIR OU TOUCHE L'ÉCRAN POUR CHANGER`,VW/2,70,5,"#ecebff");}}
 function updSpec(){if(!G.online||!G.me.dead||G.pilot===G.me.peer){G.spec=null;return;}const al=G.f.filter(F=>F!==G.me&&!F.dead&&!F.foe);if(!al.length){G.spec=null;return;}
