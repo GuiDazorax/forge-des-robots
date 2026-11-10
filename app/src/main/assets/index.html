@@ -70,7 +70,7 @@ input[type=color]{width:46px;height:34px;border:2px solid var(--line);background
 .btn.danger{background:var(--acier);color:var(--danger);box-shadow:inset -4px -4px 0 #59606A,inset 4px 4px 0 #C6CDD4}
 .btn.big{font-size:28px;padding:12px 28px}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent2);outline-offset:2px}
-.setup{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:end}
+.setup{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:end}
 @media (max-width:760px){.setup{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:420px){.setup{grid-template-columns:minmax(0,1fr)}}
 .keys{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;color:var(--muted);font-size:14px}
@@ -229,6 +229,10 @@ kbd{font-family:var(--body);font-weight:700;font-size:12px;background:var(--bg);
           <select id="diff"><option value="0">Facile</option><option value="1" selected>Normal</option><option value="2">Difficile</option></select>
         </div>
         <div class="field">
+          <label class="label" for="regle">Règle</label>
+          <select id="regle"><option value="ffa">Chacun pour soi</option><option value="equipes">Équipes rouge contre bleue</option><option value="vagues">Vagues de monstres (coop)</option></select>
+        </div>
+        <div class="field">
           <label class="label" for="decor">Décor</label>
           <select id="decor"><option value="hasard">Au hasard</option><option value="ville">Ville</option><option value="foret">Forêt</option><option value="montagne">Montagne</option><option value="volcan">Volcan</option><option value="mer">Mer</option><option value="arctique">Arctique</option></select>
         </div>
@@ -255,6 +259,7 @@ kbd{font-family:var(--body);font-weight:700;font-size:12px;background:var(--bg);
         <div class="online" id="lobby" hidden style="border:0;padding:0">
           <div class="row" style="justify-content:space-between"><span class="label">Salon<span class="code" id="codeShow"></span></span><button class="btn ghost" id="leaveBtn">Quitter le salon</button></div>
           <ul class="players" id="players"></ul>
+          <p class="note" id="lobbyRule" hidden></p>
           <div class="row" id="botRow" hidden><span class="label">Robots ordinateur</span><button class="btn ghost" id="botDel" aria-label="Retirer un robot ordinateur">−</button><span class="code" id="botN">0</span><button class="btn ghost" id="botAdd" aria-label="Ajouter un robot ordinateur">+</button></div>
           <div class="row"><button class="btn big" id="hostBtn" hidden>Lancer la partie</button><span class="note" id="lobbyNote"></span></div>
         </div>
@@ -403,8 +408,9 @@ $("delBtn").onclick=()=>{if(mine.length<2)return;if(!delArm){delArm=true;$("delB
 function randomBot(){const hsl=(h,s,l)=>{s/=100;l/=100;const k=n=>(n+h/30)%12,a=s*Math.min(l,1-l),f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));return "#"+[f(0),f(8),f(4)].map(x=>Math.round(x*255).toString(16).padStart(2,"0")).join("");};
   const h=Math.random()*360;const st={vie:0,puissance:0,vitesse:0,saut:0};const ks=Object.keys(st);let n=TOTAL;while(n>0){const k=ks[Math.floor(Math.random()*4)];if(st[k]<MAXS){st[k]++;n--;}}
   return {id:uid(),nom:"Robot",prim:hsl(h,70,55),sec:hsl((h+180+Math.random()*60)%360,45,25),visor:hsl((h+90)%360,90,70),helmet:Object.keys(HELMETS)[Math.floor(Math.random()*5)],weapon:Object.keys(WEAPONS)[Math.floor(Math.random()*4)],stats:st};}
-$("decor").onchange=()=>{try{localStorage.setItem("fdr-decor",$("decor").value);}catch(e){}};
-$("mode").onchange=()=>{const m=$("mode").value;$("diffWrap").style.visibility=m==="ia"?"visible":"hidden";
+$("regle").onchange=()=>renderLobby();
+$("decor").onchange=()=>{renderLobby();try{localStorage.setItem("fdr-decor",$("decor").value);}catch(e){}};
+$("mode").onchange=()=>{const m=$("mode").value;{const o=$("regle").querySelector('option[value="equipes"]');o.disabled=m!=="online";if(m!=="online"&&$("regle").value==="equipes")$("regle").value="ffa";}$("diffWrap").style.visibility=m==="ia"?"visible":"hidden";
   $("p2Wrap").style.visibility=m==="online"?"hidden":"visible";$("onlineBox").hidden=m!=="online";$("fightRow").hidden=m==="online";if(m==="online")checkNet();};
 
 // aperçu animé
@@ -663,7 +669,9 @@ function makeGame(o){G=Object.assign({t:0,pt:0,f:[],proj:[],fx:[],feed:[],items:
   myCraters:[],crN:0,seenCr:new Set(),myShots:[],shotN:0,seenShots:new Set(),monShots:[],msN:0,cam:{x:WW/2,y:WH/2,z:1},mon:null,mines:[],mineN:0,mineTag:Math.random().toString(36).slice(2,6),dealt:{},monBy:{},monLast:null,monKiller:null,prevMd:{},specI:0},o);}
 function setupRound(seed,th){G.seed=seed>>>0;const ft=window.__forceTheme;G.theme=has(THEMES,ft)?ft:has(THEMES,th)?th:pickTheme(G.seed);genTerrain(G.seed,G.theme);LIQY=LIQ0;G.envT=0;G.wind=0;G.proj=[];G.fx=[];G.items=[];G.mines=[];G.taken=new Set();G.myTaken=[];G.itemT=300;G.monDmg=0;
   G.phase="intro";G.pt=0;G.shake=0;G.coop=false;G.win=null;G.timeout=false;
-  const r=rng(G.seed^0x5bd1e995);r();const roll=r(),kind=MONK[Math.floor(r()*3)],fm=window.__forceMon;G.mon=(fm?true:roll<.4)?makeMonster(has(MONS,fm)?fm:kind,r):null;G.introLen=G.mon?330:110;}
+  const r=rng(G.seed^0x5bd1e995);r();const roll=r(),kind=MONK[Math.floor(r()*3)],fm=window.__forceMon;G.mon=(fm||G.rule==="vagues"?true:G.rule==="equipes"?roll<.2:roll<.4)?makeMonster(has(MONS,fm)?fm:kind,r):null;G.wave=0;
+  if(G.mon&&G.rule==="vagues"){G.wave=1;G.mon.mx=Math.round(G.mon.mx*waveMul(1));G.mon.hp=G.mon.mx;G.mon.base=0;}
+  G.introLen=G.mon?330:110;}
 const isAuth=()=>!G.online||G.authPeer===G.me.peer;
 const ownsLocally=src=>!!src&&(src.isMon?isAuth():!src.remote);
 function addFeed(t){G.feed.push({t,life:300});if(G.feed.length>4)G.feed.shift();}
@@ -674,7 +682,7 @@ const killerName=by=>by&&by.isMon?MONS[by.k].nom:(by&&by.a?by.a.nom:"Un robot");
 
 function startMatch(){
   const a1=byId($("p1").value),a2=byId($("p2").value);const solo=$("mode").value==="ia";
-  makeGame({online:false,solo,diff:+$("diff").value,a:[a1,a2],wins:[0,0],round:0,decor:$("decor").value});
+  const rule=$("regle").value==="vagues"?"vagues":"ffa";makeGame({online:false,solo,diff:+$("diff").value,a:[a1,a2],wins:[0,0],round:0,decor:$("decor").value,rule,teams:rule==="vagues"});
   $("matchTitle").textContent=`${a1.nom} contre ${a2.nom}`;
   newRound();
   $("atelier").hidden=true;$("combat").hidden=false;setPlaying(true);$("ov").hidden=true;paused=false;
@@ -682,7 +690,7 @@ function startMatch(){
   cancelAnimationFrame(raf);last=performance.now();acc=0;raf=requestAnimationFrame(loop);
   $("combat").scrollIntoView({block:"start",behavior:"smooth"});}
 function newRound(){G.round++;setupRound((Math.random()*4294967296)>>>0,G.decor);
-  G.f=[mkFighter(G.a[0],0),mkFighter(G.a[1],1)];G.f[0].ctrl=0;G.f[1].ctrl=G.solo?"ai":1;G.f.forEach((F,i)=>place(F,i+1,4));
+  G.f=[mkFighter(G.a[0],0),mkFighter(G.a[1],1)];G.f[0].ctrl=0;G.f[1].ctrl=G.solo?"ai":1;G.f.forEach((F,i)=>{place(F,i+1,4);if(G.rule==="vagues")F.team=0;});
   G.timer=90*60;G.cam={x:WW/2,y:WH/2,z:1};}
 
 function mkProj(o){return Object.assign({x:0,y:0,vx:0,vy:0,w:4,h:3,dmg:2,life:90,grav:0,kind:"shot",hits:new Set()},o);}
@@ -695,8 +703,16 @@ function fire(F,big,at){const w=F.a.weapon,f=at?at.f:F.face,mx=(at?at.x:F.x)+f*1
   F.shootAnim=10;sfx(big?"big":"shot");
   if(G.online&&!F.remote&&!at)G.myShots.push({i:++G.shotN,x:r1(F.x),y:r1(F.y),f,b:big?1:0,d:F.buffD>0?1:0,t:G.t,o:F.isBot?F.peer:undefined});}
 
+const TEAMC=["#ff5c5c","#5cb8ff"],TEAMN=["ROUGE","BLEUE"];
+const ally=(a,b)=>!!(G&&G.teams&&a&&b&&a!==b&&a.team!==undefined&&a.team===b.team);
+function teamOf(peer){return G.rule==="vagues"?0:G.rule==="equipes"?Math.max(0,G.players.indexOf(peer))%2:undefined;}
+const waveMul=w=>.7+.3*(w-1);
+function spawnWave(k,w){const old=G.mon;G.wave=w;G.mon=makeMonster(k,rng((G.seed^Math.imul(w,2654435761))>>>0));G.mon.mx=Math.round(G.mon.mx*waveMul(w));G.mon.hp=G.mon.mx;
+  G.mon.base=totalMonDmg();G.monLast=null;G.monKiller=null;G.monNet=null;
+  for(const F of G.f)if(!F.remote&&!F.dead)F.hp=Math.min(F.maxHp,F.hp+F.maxHp*.3);
+  addFeed(`Vague ${w} : ${MONS[k].nom} arrive !`);sfx("alarm");G.waveT=G.t;}
 const sk=by=>!by?null:by.isMon?"mon":by.isEnv?"env":G.online?(by.peer||null):"s"+by.side;
-function damage(T,dmg,dir,by,opt){opt=opt||{};if(T.remote||T.dead||G.phase!=="fight")return false;
+function damage(T,dmg,dir,by,opt){opt=opt||{};if(T.remote||T.dead||G.phase!=="fight"||ally(by,T))return false;
   if(T.shield>0){T.shield=Math.max(0,T.shield-90);T.inv=Math.max(T.inv,10);sfx("web");for(let i=0;i<8;i++){const an=i/8*Math.PI*2;G.fx.push({x:T.x+Math.cos(an)*14,y:T.y-11+Math.sin(an)*16,vx:Math.cos(an),vy:Math.sin(an),life:14,c:"#7fd0ff",s:2,ring:true});}return false;}
   if(opt.web){T.web=Math.max(T.web,opt.web);T.charge=0;}
   if(T.inv>0)return false;
@@ -768,7 +784,7 @@ function updFighter(F,inp,O){
   if(!F.stun&&!webbed){if(shootP&&F.cd<=0){fire(F,false);F.cd=WEAPONS[F.a.weapon].rate;}
     if(inp.shoot)F.charge++;else{if(F.charge>=55){fire(F,true);F.cd=WEAPONS[F.a.weapon].rate;}F.charge=0;}}
   if(F.inv>0)F.inv--;if(F.shootAnim>0)F.shootAnim--;}
-function nearestTarget(F){let O=null,bd=1e9;for(const T of G.f){if(T===F||T.dead)continue;const d=Math.abs(T.x-F.x)+Math.abs(T.y-F.y);if(d<bd){bd=d;O=T;}}
+function nearestTarget(F){let O=null,bd=1e9;for(const T of G.f){if(T===F||T.dead||ally(F,T))continue;const d=Math.abs(T.x-F.x)+Math.abs(T.y-F.y);if(d<bd){bd=d;O=T;}}
   const M=G.mon;if(M&&!M.dead&&M.st!=="attente"){const c=monCircles(M)[0];if(c){const d=Math.abs(c.x-F.x)+Math.abs(c.y-F.y);if(d<bd*1.1){bd=d;O={x:c.x,y:c.y+10,mon:true};}}}
   return O;}
 
@@ -787,6 +803,9 @@ function aiInput(F){const d=DIFF[G.diff||1],A=F.ai,inp={};const O=nearestTarget(
   for(const p of G.proj){if(p.owner===F)continue;const toward=Math.sign(p.vx)===Math.sign(F.x-p.x);
     if(toward&&Math.abs(p.x-F.x)<80&&Math.abs(p.y-(F.y-11))<16&&Math.random()<d.dodge){if(Math.random()<.65&&F.onGround){A.jumpHold=12+Math.random()*10;}else inp.dash=!F.prev.dash;break;}}
   if(F.onGround&&(F.wasBlocked||(dy<-30&&Math.random()<.04)||(goal&&goal.y<F.y-20&&Math.random()<.06)||Math.random()<d.jump))A.jumpHold=8+Math.random()*14;
+  if(!F.onGround&&surfaceY(F.x,F.y)>=LIQY-2){ // en l'air au-dessus du vide : viser le bord le plus proche
+    let best=0;for(let d=8;d<=90&&!best;d+=8){if(surfaceY(F.x-d,F.y)<LIQY-2)best=-1;else if(surfaceY(F.x+d,F.y)<LIQY-2)best=1;}if(best)mv=best;if(F.jet>0)inp.jump=true;}
+  if(inp.dash&&surfaceY(F.x+(mv||F.face)*50,F.y-24)>=LIQY-2)inp.dash=false;
   if(F.onGround&&mv&&surfaceY(F.x+mv*14,F.y-24)>=LIQY-2){ // vide devant : sauter s'il y a un sol en face, sinon s'arrêter
     if(surfaceY(F.x+mv*56,F.y-40)<LIQY-2){if(!(A.jumpHold>0))A.jumpHold=20;}else{mv=0;A.mv=-A.mv;}}
   if(A.jumpHold>0){A.jumpHold--;inp.jump=!(F.onGround&&F.prev.jump);}
@@ -805,7 +824,7 @@ function updMines(){
     if(m.local&&(G.taken.has(m.id)||m.life<=0)){m.dead=true;if(m.life>0)mineBoom(m);continue;}
     if(!solid(m.x,m.y+1)&&m.y<WH)m.y++;
     if(m.arm>0||G.phase!=="fight")continue;let hit=false;
-    for(const T of G.f){if(T.remote||T.dead||T===m.owner)continue;if(Math.abs(T.x-m.x)<12&&T.y>m.y-24&&T.y<m.y+10){hit=true;break;}}
+    for(const T of G.f){if(T.remote||T.dead||T===m.owner||ally(m.owner,T))continue;if(Math.abs(T.x-m.x)<12&&T.y>m.y-24&&T.y<m.y+10){hit=true;break;}}
     const M=G.mon;if(!hit&&m.local&&M&&!M.dead&&M.st!=="attente")for(const c of monCircles(M)){const dx=c.x-m.x,dy=c.y-m.y;if(dx*dx+dy*dy<(c.r+10)*(c.r+10)){hit=true;break;}}
     if(hit){m.dead=true;mineBoom(m);if(!m.local){G.taken.add(m.id);G.myTaken.push({id:m.id,t:G.t});}}}
   G.mines=G.mines.filter(m=>!m.dead&&m.y<LIQY+2);}
@@ -885,7 +904,7 @@ function monDeathFx(M){if(M.deadT%6===0&&M.deadT<100){const c=monCircles(M);cons
 function updMonster(){const M=G.mon;if(!M)return;M.t++;if(M.flash>0)M.flash--;
   if(G.online&&!isAuth()){netMonster(M);return;}
   if(M.dead){M.deadT++;monDeathFx(M);return;}
-  if(M.st!=="attente"){M.hp=Math.max(0,M.mx-totalMonDmg());if(M.hp<=0&&G.phase==="fight"){M.dead=true;M.deadT=0;G.monKiller=G.monLast;sfx("roar");G.shake=26;addFeed(`${MONS[M.k].nom} est vaincu !`);return;}}
+  if(M.st!=="attente"){M.hp=Math.max(0,M.mx-(totalMonDmg()-(M.base||0)));if(M.hp<=0&&G.phase==="fight"){M.dead=true;M.deadT=0;G.monKiller=G.monLast;sfx("roar");G.shake=26;addFeed(`${MONS[M.k].nom} est vaincu !`);return;}}
   if(M.st==="attente"){if(G.phase!=="intro"||G.pt>=70){M.st="entree";M.t=0;sfx("roar");}else return;}
   ({ver:aiVer,araignee:aiAraignee,kaiju:aiKaiju})[M.k](M);}
 function netMonster(M){const n=G.monNet;if(M.dead){M.deadT++;monDeathFx(M);}if(!n)return;
@@ -909,7 +928,7 @@ function terrainHit(p){const k=p.kind,o=ownsLocally(p.owner);
 function updProj(){const M=G.mon;
   for(const p of G.proj){if(G.wind&&p.grav)p.vx+=G.wind*.02;p.x+=p.vx;p.vy+=p.grav;p.y+=p.vy;p.life--;
     if(p.kind!=="shock"&&p.kind!=="bite"&&solid(p.x,p.y)){terrainHit(p);if(p.dead)continue;}
-    for(const T of G.f){if(T===p.owner||T.dead||p.hits.has(T))continue;
+    for(const T of G.f){if(T===p.owner||T.dead||p.hits.has(T)||ally(p.owner,T))continue;
       if(Math.abs(p.x-T.x)<5+p.w/2&&p.y+p.h/2>T.y-21&&p.y-p.h/2<T.y){
         if(p.kind==="bomb"||p.kind==="lava"){explode(p);p.dead=true;break;}
         if(T.inv>0&&p.kind!=="web")continue;
@@ -949,9 +968,15 @@ function stepGame(){if(G.online&&!NET.r){backToLobby();return;}
   if(G.online&&G.t%2===0)sendNet();
   if(G.phase==="intro"){if(G.mon&&G.pt<110&&G.pt%24===0)sfx("alarm");if(!G.mon&&G.pt===40)sfx("beep");if(G.pt>=G.introLen){G.phase="fight";G.pt=0;sfx("big");}}
   else if(G.phase==="fight"){if(!G.mon)G.timer--;
-    if(G.mon&&G.mon.dead){G.phase="ko";G.pt=0;G.coop=true;G.win=null;sfx("big");}
+    if(G.rule==="vagues"){if(G.mon&&G.mon.dead&&G.mon.deadT>150&&isAuth())spawnWave(MONK[Math.floor(Math.random()*MONK.length)],G.wave+1);
+      if(G.pt>30&&alivePlayers().length===0){G.phase="ko";G.pt=0;G.win=null;G.timeout=false;sfx("ko");}}
+    else if(G.mon&&G.mon.dead){G.phase="ko";G.pt=0;G.coop=true;G.win=null;sfx("big");}
     else if(G.mon){ // avec un monstre : la partie ne finit que s'il meurt ou si tous les robots tombent
       if(G.pt>30&&alivePlayers().length===0){G.phase="ko";G.pt=0;G.win=null;G.timeout=false;sfx("ko");}}
+    else if(G.rule==="equipes"){const alive=alivePlayers(),ts=new Set(alive.map(a=>teamOf(a)));
+      if(G.pt>30&&(ts.size<=1||G.timer<=0)){let wt=ts.size===1?[...ts][0]:null;
+        if(ts.size>1){const sc=[0,0];for(const a of alive){const F=fighterOf(a);if(F)sc[teamOf(a)]+=F.hp/F.maxHp;}wt=sc[0]===sc[1]?null:sc[0]>sc[1]?0:1;}
+        G.phase="ko";G.pt=0;G.win=null;G.winTeam=wt;G.timeout=G.timer<=0;sfx("ko");}}
     else{const alive=alivePlayers();
       if(G.pt>30&&(alive.length<=1||G.timer<=0)){let win=alive.length===1?alive[0]:null;
         if(alive.length>1){let best=-1;for(const a of alive){const F=G.online?fighterOf(a):a;const r=F?F.hp/F.maxHp:0;if(r>best){best=r;win=a;}}}
@@ -961,7 +986,7 @@ const fighterOf=peer=>G.f.find(x=>x.peer===peer);
 function alivePlayers(){if(!G.online)return G.f.filter(F=>!F.dead);
   return G.players.filter(peer=>{const R=fighterOf(peer);if(R)return !R.dead;return G.present.has(peer)&&G.pt<240;});}
 function tallyKills(){G.kills=G.kills||{};for(const F of G.f)if(F.dead&&F.kk&&!F.tallied){F.tallied=true;G.kills[F.kk]=(G.kills[F.kk]||0)+1;}}
-function localRoundEnd(){tallyKills();if(G.coop){endMatch(true);return;}if(G.win)G.wins[G.win.side]++;
+function localRoundEnd(){tallyKills();if(G.rule==="vagues"){endMatch("vagues");return;}if(G.coop){endMatch(true);return;}if(G.win)G.wins[G.win.side]++;
   if(G.wins[0]>=2||G.wins[1]>=2||G.round>=5)endMatch(false);else newRound();}
 // ---------- Tableau des scores ----------
 function scoreRows(){const rows=[];
@@ -978,13 +1003,14 @@ function showScore(){const el=$("ovScore");el.innerHTML="";const rows=scoreRows(
   t.innerHTML=`<tr><th>Robot</th><th>Dégâts</th><th>Élim.</th>${M?"<th>Monstre</th>":""}</tr>`;
   for(const r of rows){const tr=document.createElement("tr");if(r.me)tr.className="me";
     const td=v=>{const c=document.createElement("td");c.textContent=v;tr.appendChild(c);return c;};
-    const n=td(r.nom);const sw=document.createElement("i");sw.style.background=r.col;n.prepend(sw);
+    const n=td(r.nom);const sw=document.createElement("i");sw.style.background=r.col;if(G.rule==="equipes"&&G.online){const tm=teamOf(r.k);if(tm!==undefined){sw.style.outline=`2px solid ${TEAMC[tm]}`;n.style.color=TEAMC[tm];}}n.prepend(sw);
     if(r===best&&sc(r)>0){const st=document.createElement("span");st.className="star";st.textContent=" ★ MVP";n.appendChild(st);}
     td(Math.round(r.dmg));td(r.kills);if(M){const c=td(Math.round(r.mon));if(M.dead&&G.monKiller===r.k){c.textContent+=" ⚔";c.title="Coup final";c.className="star";}}
     t.appendChild(tr);}
   el.appendChild(t);if(M&&M.dead&&rows.some(r=>r.k===G.monKiller)){const p=document.createElement("p");p.textContent=`⚔ Coup final sur ${MONS[M.k].nom} : ${rows.find(r=>r.k===G.monKiller).nom}`;el.appendChild(p);}}
 function endMatch(coop){G.phase="over";if(!G.online)tallyKills();
-  if(coop){$("ovTitle").textContent="VICTOIRE COLLECTIVE !";$("ovText").textContent=`${G.a[0].nom} et ${G.a[1].nom} ont vaincu ${MONS[G.mon.k].nom}.`;}
+  if(coop==="vagues"){const n=Math.max(0,G.wave-1);$("ovTitle").textContent="FIN DE LA RÉSISTANCE";$("ovText").textContent=`${G.a[0].nom} et ${G.a[1].nom} ont tenu ${n} vague${n>1?"s":""}. Record à battre !`;}
+  else if(coop){$("ovTitle").textContent="VICTOIRE COLLECTIVE !";$("ovText").textContent=`${G.a[0].nom} et ${G.a[1].nom} ont vaincu ${MONS[G.mon.k].nom}.`;}
   else{const w=G.wins[0]===G.wins[1]?-1:(G.wins[0]>G.wins[1]?0:1);
     $("ovTitle").textContent=w<0?"MATCH NUL":`${G.a[w].nom.toUpperCase()} GAGNE !`;
     $("ovText").textContent=`Manches : ${G.a[0].nom} ${G.wins[0]} - ${G.wins[1]} ${G.a[1].nom}`+(G.solo&&w===1?". Essaie une autre arme ou d'autres stats à l'atelier.":"");}
@@ -1097,14 +1123,15 @@ let specVis=false;function render(){const hold=G.online?G.me:G.f[0];const sv=!!(
   for(const e of G.fx){if(e.ghost)continue;if(e.text){txt(e.text,Math.round(e.x),Math.round(e.y),5,e.c);continue;}
     if(e.boom){const k=1-e.life/e.max;g.strokeStyle=e.life%4<2?"#ffffff":"#ffb52e";g.lineWidth=3;g.beginPath();g.arc(e.x,e.y,e.boom*(.4+.6*k),0,7);g.stroke();continue;}
     g.fillStyle=e.c;g.fillRect(Math.round(e.x),Math.round(e.y),e.s,e.s);}
-  if(G.online){for(const F of G.f){if(F.dead)continue;const tag=F===G.me?"TOI":F.a.nom.toUpperCase().slice(0,8);txt(tag,Math.round(F.x),Math.round(F.y)-38,5,F===G.me?"#ffb52e":"#c9cbef");}
+  if(G.online){for(const F of G.f){if(F.dead)continue;const tag=F===G.me?"TOI":F.a.nom.toUpperCase().slice(0,8);const tc=G.rule==="equipes"&&F.team!==undefined?TEAMC[F.team]:null;txt(tag,Math.round(F.x),Math.round(F.y)-38,5,tc||(F===G.me?"#ffb52e":"#c9cbef"));
+      if(tc){g.fillStyle=tc;g.fillRect(Math.round(F.x)-3,Math.round(F.y)-44,6,3);}}
     const me=G.me;if(me.charge>15){const k=Math.min(1,me.charge/55);g.fillStyle="#0a0a16";g.fillRect(me.x-11,me.y+3,22,3);g.fillStyle=k>=1?"#ffffff":me.a.visor;g.fillRect(me.x-10,me.y+4,Math.round(20*k),1);}}
   // ---- interface ----
   g.setTransform(2,0,0,2,0,0);
   if(M&&!M.dead&&M.st!=="attente"){const cc=monCircles(M)[0];if(cc)edgeArrow(cc.x,cc.y,MONS[M.k].col);}
   if(G.online)for(const F of G.f)if(F!==G.me&&!F.dead)edgeArrow(F.x,F.y-12,F.a.prim);
   if(G.online)onlineHud();else{hpBar(G.f[0],8,false);hpBar(G.f[1],VW-138,true);
-    if(M)txt("ÉQUIPE",VW/2,10,8,"#3fe0c4");else{const sec=Math.ceil(G.timer/60);txt(String(Math.max(0,sec)).padStart(2,"0"),VW/2,8,12,sec<=10?"#ff5c7a":"#ecebff");}}
+    if(M)txt(G.rule==="vagues"?`VAGUE ${G.wave}`:"ÉQUIPE",VW/2,10,8,G.rule==="vagues"?"#ffb52e":"#3fe0c4");else{const sec=Math.ceil(G.timer/60);txt(String(Math.max(0,sec)).padStart(2,"0"),VW/2,8,12,sec<=10?"#ff5c7a":"#ecebff");}}
   if(G.wind){const a=G.wind>0?">":"<";txt(`VENT ${a.repeat(Math.abs(G.wind)>.75?3:Math.abs(G.wind)>.5?2:1)}`,VW/2,G.online?32:26,6,"#bfe6ff");}
   G.feed.forEach((f,i)=>txt(f.t.toUpperCase(),6,(M?186:200)-(G.feed.length-1-i)*9,5,"#ecebff","left"));
   if(M&&M.st!=="attente"&&!(M.dead&&M.deadT>100)){const w=150,x=VW/2-w/2,y=200;txt(MONS[M.k].nom,VW/2,y-9,6,MONS[M.k].col);
@@ -1113,12 +1140,14 @@ let specVis=false;function render(){const hold=G.online?G.me:G.f[0];const sv=!!(
     if(M){const a=G.pt<200&&G.pt%20<10;if(a){g.fillStyle="#ff2d5555";g.fillRect(0,0,VW,VH);}
       g.fillStyle="#ff2d55";for(let x=-20+(G.pt%20);x<VW;x+=20){g.fillRect(x,0,10,6);g.fillRect(x,VH-6,10,6);}
       if(G.pt<120)txt("ALERTE MONSTRE",VW/2,70,14,G.pt%20<10?"#ff2d55":"#ffffff");
-      else if(G.pt<G.introLen-40){txt(MONS[M.k].nom,VW/2,60,20,MONS[M.k].col);txt(MONS[M.k].sous,VW/2,88,7,"#ecebff");txt("TUEZ-LE ENSEMBLE : S'IL TOMBE, TOUT LE MONDE GAGNE",VW/2,104,5,"#ffb52e");}
+      else if(G.pt<G.introLen-40){txt(MONS[M.k].nom,VW/2,60,20,MONS[M.k].col);txt(MONS[M.k].sous,VW/2,88,7,"#ecebff");txt(G.rule==="vagues"?"COOP : TENEZ LE PLUS DE VAGUES POSSIBLE":"TUEZ-LE ENSEMBLE : S'IL TOMBE, TOUT LE MONDE GAGNE",VW/2,104,5,"#ffb52e");}
       else txt("PRÊTS ?",VW/2,90,12,"#ffb52e");}
     else{txt(`ARÈNE : ${TH.nom.toUpperCase()}`,VW/2,62,7,"#3fe0c4");txt(G.online?`${G.players.length} ROBOTS`:`MANCHE ${G.round}`,VW/2,80,14,"#ecebff");if(G.pt>40)txt("PRÊTS ?",VW/2,104,10,"#ffb52e");}}
   if(G.phase==="fight"&&G.pt<40)txt("COMBAT !",VW/2,90,16,"#ffb52e");
   if(G.phase==="ko"&&G.pt>20){
     if(G.coop)txt("VICTOIRE COLLECTIVE !",VW/2,84,13,"#3fe0c4");
+    else if(G.rule==="vagues")txt(`FIN : ${Math.max(0,G.wave-1)} VAGUE${G.wave>2?"S":""} TENUE${G.wave>2?"S":""}`,VW/2,88,12,"#ffb52e");
+    else if(G.rule==="equipes"&&G.online){const t=G.winTeam;txt(t==null?(M&&!M.dead?`${MONS[M.k].nom} GAGNE`:"ÉGALITÉ"):`ÉQUIPE ${TEAMN[t]} GAGNE`,VW/2,88,14,t==null?"#ffb52e":TEAMC[t]);}
     else if(G.online){const w=G.win;txt(w===G.me.peer?"VICTOIRE !":w?`${peerName(w).toUpperCase()} GAGNE`:(M&&!M.dead?`${MONS[M.k].nom} GAGNE`:"ÉGALITÉ"),VW/2,88,w===G.me.peer?16:10,"#ffb52e");}
     else{txt(G.timeout?"TEMPS ÉCOULÉ":M&&!M.dead?"DÉFAITE":"K.O.",VW/2,84,G.timeout?12:22,"#ff5c7a");
       if(G.pt>90)txt(G.win?`${G.win.a.nom.toUpperCase()} REMPORTE LA MANCHE`:(M&&!M.dead?`${MONS[M.k].nom} VOUS A TOUS BATTUS`:"ÉGALITÉ"),VW/2,116,7,"#ecebff");}}}
@@ -1172,7 +1201,7 @@ function renderLobby(){if(!NET.r){$("lobby").hidden=true;return;}$("lobby").hidd
     sm.textContent=(pr.st==="play"?"en combat":"au salon")+" · "+WEAPONS[b.weapon].nom;d.appendChild(sm);li.appendChild(d);L.appendChild(li);}
   const host=isHost();if(host)for(let i=0;i<Math.min(NET.bots,8-Math.min(8,ps.length));i++){const R=RIVALS[i%RIVALS.length];const li=document.createElement("li");li.appendChild(mini(R));const d=document.createElement("div");d.textContent="Robot ordinateur";const sm=document.createElement("small");sm.textContent="contrôlé par ton téléphone";d.appendChild(sm);li.appendChild(d);L.appendChild(li);}
   const lob=ps.filter(p=>p.sameTab||p.presence.st==="lobby").length+(host?Math.min(NET.bots,8-lob0(ps)):0);
-  $("botRow").hidden=!host;$("botN").textContent=NET.bots;
+  $("botRow").hidden=!host;if(host){const rn={ffa:"chacun pour soi",equipes:"équipes rouge contre bleue",vagues:"vagues de monstres"}[$("regle").value];$("lobbyRule").textContent=`Règle : ${rn}. Décor : ${$("decor").selectedOptions[0].textContent.toLowerCase()}.`;}$("lobbyRule").hidden=!host;$("botN").textContent=NET.bots;
   $("hostBtn").hidden=!host;$("hostBtn").disabled=lob<2;$("hostBtn").style.opacity=lob<2?.5:1;
   $("lobbyNote").textContent=lob<2?(host?"En attente d'un autre joueur… ou ajoute des robots ordinateur.":"En attente d'au moins un autre joueur…"):host?`${Math.min(8,lob)} robots prêts. C'est toi qui lances la partie.`:"L'hôte du salon va lancer la partie.";
   if(lob>8)$("lobbyNote").textContent+=" (8 joueurs maximum par partie : les autres jouent la suivante.)";}
@@ -1184,13 +1213,13 @@ function hostStart(){if(!isHost())return;const players=roomPeers().filter(p=>p.s
     const me=myPeer(),nb=Math.max(0,Math.min(NET.bots,8-players.length)),bots=[];
   const r0=Math.floor(Math.random()*RIVALS.length);for(let i=0;i<nb;i++){const R=RIVALS[(i+r0)%RIVALS.length];bots.push({id:me+"#b"+(i+1),cfg:Object.assign({},R,{nom:R.nom+" IA"})});}
   players.push(...bots.map(b=>b.id));
-  const m={id:"m"+Math.random().toString(36).slice(2,10),players,seed:(Math.random()*4294967296)>>>0,diff:+$("diff").value};NET.botCfg=bots;const dv=$("decor").value;m.theme=has(THEMES,dv)?dv:pickTheme(m.seed);NET.match=m;NET.seen.add(m.id);NET.r.presence({match:m}).catch(()=>{});startOnline(m);}
+  const m={id:"m"+Math.random().toString(36).slice(2,10),players,seed:(Math.random()*4294967296)>>>0,diff:+$("diff").value,rule:$("regle").value};NET.botCfg=bots;const dv=$("decor").value;m.theme=has(THEMES,dv)?dv:pickTheme(m.seed);NET.match=m;NET.seen.add(m.id);NET.r.presence({match:m}).catch(()=>{});startOnline(m);}
 
 function startOnline(m){const me=myPeer();const players=m.players.filter(x=>typeof x==="string").slice(0,8);const idx=Math.max(0,players.indexOf(me));
-  makeGame({online:true,matchId:m.id,players,remotes:new Map(),netG:new Map(),present:new Set(players),authPeer:players[0],me:{peer:me}});
+  makeGame({online:true,rule:["equipes","vagues"].includes(m.rule)?m.rule:"ffa",teams:["equipes","vagues"].includes(m.rule),matchId:m.id,players,remotes:new Map(),netG:new Map(),present:new Set(players),authPeer:players[0],me:{peer:me}});
   setupRound(num(m.seed,1),typeof m.theme==="string"?m.theme:null);G.timer=150*60;
-  const F=mkFighter(myBot(),0);F.peer=me;F.isMe=true;F.ctrl=0;place(F,idx,players.length);G.me=F;G.f.push(F);G.cam={x:F.x,y:F.y,z:1.7};G.diff=[0,1,2].includes(m.diff)?m.diff:1;
-  if(NET.botCfg&&NET.match&&NET.match.id===m.id)for(const b of NET.botCfg){const B=mkFighter(cleanCfg(b.cfg,b.cfg.nom),1);B.peer=b.id;B.isBot=true;B.ctrl="ai";place(B,players.indexOf(b.id),players.length);G.f.push(B);}
+  const F=mkFighter(myBot(),0);F.peer=me;F.isMe=true;F.ctrl=0;F.team=teamOf(me);place(F,idx,players.length);G.me=F;G.f.push(F);G.cam={x:F.x,y:F.y,z:1.7};G.diff=[0,1,2].includes(m.diff)?m.diff:1;
+  if(NET.botCfg&&NET.match&&NET.match.id===m.id)for(const b of NET.botCfg){const B=mkFighter(cleanCfg(b.cfg,b.cfg.nom),1);B.peer=b.id;B.isBot=true;B.ctrl="ai";B.team=teamOf(b.id);place(B,players.indexOf(b.id),players.length);G.f.push(B);}
   NET.st="play";NET.r.presence({st:"play"}).catch(()=>{});
   $("matchTitle").textContent=`${window.AndroidBT?"Bluetooth":"En ligne · salon "+NET.code.toUpperCase()} · ${players.length} robots`;$("pauseBtn").hidden=true;
   $("atelier").hidden=true;$("combat").hidden=false;setPlaying(true);$("ov").hidden=true;paused=false;keys.clear();
@@ -1200,8 +1229,10 @@ function backToLobby(){cancelAnimationFrame(raf);clearTimeout(NET.backT);G=null;
   if(NET.r){NET.st="lobby";NET.match=null;NET.r.presence(Object.assign(lobbyPresence(),{g:null})).catch(()=>{});}
   $("combat").hidden=true;$("atelier").hidden=false;setPlaying(false);requestAnimationFrame(previewLoop);renderLobby();$("onlineBox").scrollIntoView({block:"center"});}
 function showOnlineEnd(){const w=G.win,M=G.mon;
-  $("ovTitle").textContent=G.coop?"VICTOIRE COLLECTIVE !":w===G.me.peer?"VICTOIRE !":w?`${peerName(w).toUpperCase()} GAGNE !`:(M&&!M.dead?`${MONS[M.k].nom} A GAGNÉ`:"PERSONNE NE GAGNE");
-  $("ovText").textContent=(G.coop?`${MONS[M.k].nom} est vaincu, tout le monde gagne. `:"")+(G.timeout?"Temps écoulé. ":"")+"Retour au salon dans 8 secondes.";
+  if(G.rule==="vagues"){const n=Math.max(0,G.wave-1);$("ovTitle").textContent="FIN DE LA RÉSISTANCE";$("ovText").textContent=`Vous avez tenu ${n} vague${n>1?"s":""} ensemble. Retour au salon dans 8 secondes.`;}
+  else if(G.rule==="equipes"&&!G.coop){const t=G.winTeam;$("ovTitle").textContent=t==null?(M&&!M.dead?`${MONS[M.k].nom} A GAGNÉ`:"ÉGALITÉ"):t===G.me.team?"TON ÉQUIPE GAGNE !":`ÉQUIPE ${TEAMN[t]} GAGNE`;$("ovText").textContent=(G.timeout?"Temps écoulé. ":"")+"Retour au salon dans 8 secondes.";}
+  else{$("ovTitle").textContent=G.coop?"VICTOIRE COLLECTIVE !":w===G.me.peer?"VICTOIRE !":w?`${peerName(w).toUpperCase()} GAGNE !`:(M&&!M.dead?`${MONS[M.k].nom} A GAGNÉ`:"PERSONNE NE GAGNE");
+  $("ovText").textContent=(G.coop?`${MONS[M.k].nom} est vaincu, tout le monde gagne. `:"")+(G.timeout?"Temps écoulé. ":"")+"Retour au salon dans 8 secondes.";}
   showScore();$("ovMain").textContent="Retour au salon";$("ovAlt").textContent="Atelier";$("ov").hidden=false;
   NET.backT=setTimeout(()=>{if(G&&G.online&&G.phase==="ko")backToLobby();},8000);}
 const clampX=v=>Math.max(-100,Math.min(WW+100,v)),clampY=v=>Math.max(-400,Math.min(WH+50,v));
@@ -1218,12 +1249,12 @@ function syncNet(){const peers=NET.r.peers();const present=new Set([G.me.peer]);
   for(const p of peers){if(p.sameTab||!G.players.includes(p.peer))continue;const pr=p.presence||{};if(pr.st!=="play")continue;present.add(p.peer);
     const q=pr.g;if(!q||typeof q!=="object"||q.m!==G.matchId)continue;G.netG.set(p.peer,q);
     let F=G.remotes.get(p.peer);
-    if(!F){F=mkFighter(cleanCfg(pr.cfg,pr.nom),1);F.remote=true;F.peer=p.peer;F.x=clampX(num(q.x,WW/2));F.y=clampY(num(q.y,0));G.remotes.set(p.peer,F);G.f.push(F);}
+    if(!F){F=mkFighter(cleanCfg(pr.cfg,pr.nom),1);F.remote=true;F.peer=p.peer;F.team=teamOf(p.peer);F.x=clampX(num(q.x,WW/2));F.y=clampY(num(q.y,0));G.remotes.set(p.peer,F);G.f.push(F);}
     remoteState(F,q);
     {const old=G.mines.filter(m=>!m.local&&m.peer===p.peer),nw=[];if(Array.isArray(q.mn))for(const a of q.mn.slice(0,8)){if(!Array.isArray(a)||typeof a[0]!=="string")continue;const id=a[0].slice(0,12);if(G.taken.has(id))continue;const o=old.find(m=>m.id===id);nw.push(o||{id,x:clampX(num(a[1],0)),y:clampY(num(a[2],0)),owner:F,peer:p.peer,arm:0});}
       for(const m of old)if(!nw.includes(m)&&!m.dead&&!G.taken.has(m.id))boomFx(m.x,m.y-4,20);G.mines=G.mines.filter(m=>m.local||m.peer!==p.peer).concat(nw);}
     if(Array.isArray(q.bots))for(const b of q.bots.slice(0,7)){if(!b||typeof b!=="object"||typeof b.id!=="string"||!G.players.includes(b.id))continue;present.add(b.id);
-      let B=G.remotes.get(b.id);if(!B){B=mkFighter(cleanCfg(b.cfg,b.cfg&&b.cfg.nom),1);B.remote=true;B.isBot=true;B.peer=b.id;B.x=clampX(num(b.x,WW/2));B.y=clampY(num(b.y,0));G.remotes.set(b.id,B);G.f.push(B);}
+      let B=G.remotes.get(b.id);if(!B){B=mkFighter(cleanCfg(b.cfg,b.cfg&&b.cfg.nom),1);B.remote=true;B.isBot=true;B.peer=b.id;B.team=teamOf(b.id);B.x=clampX(num(b.x,WW/2));B.y=clampY(num(b.y,0));G.remotes.set(b.id,B);G.f.push(B);}
       remoteState(B,b);}
     if(Array.isArray(q.s))for(const s of q.s.slice(0,12)){if(!s||typeof s!=="object")continue;const key=p.peer+":"+num(s.i,0);if(G.seenShots.has(key))continue;G.seenShots.add(key);
       const SF=typeof s.o==="string"&&G.remotes.get(s.o)||F;fire(SF,!!s.b,{x:clampX(num(s.x,SF.x)),y:clampY(num(s.y,SF.y)),f:s.f<0?-1:1,bd:!!s.d});}
@@ -1234,7 +1265,8 @@ function syncNet(){const peers=NET.r.peers();const present=new Set([G.me.peer]);
   G.present=present;G.authPeer=G.players.find(x=>present.has(x))||G.me.peer;
   if(!isAuth()){const q=G.netG.get(G.authPeer);if(q){
     if(Array.isArray(q.it))G.items=q.it.slice(0,10).filter(o=>o&&typeof o.id==="string"&&has(ITEMS,o.k)&&!G.taken.has(o.id)).map(o=>{const old=G.items.find(i=>i.id===o.id);return {id:o.id.slice(0,12),k:o.k,x:clampX(num(o.x,0)),y:old?old.y+(clampY(num(o.y,0))-old.y)*.3:clampY(num(o.y,0)),vy:0};});
-    if(q.mo&&typeof q.mo==="object"){G.monNet=q.mo;if(q.mo.d&&typeof q.mo.lk==="string")G.monKiller=q.mo.lk.slice(0,40);}
+    if(q.mo&&typeof q.mo==="object"&&G.rule==="vagues"&&num(q.mo.w,0)>(G.wave||0)&&num(q.mo.w,0)<200&&has(MONS,q.mo.k))spawnWave(q.mo.k,num(q.mo.w,1));
+    if(q.mo&&typeof q.mo==="object"&&!(G.rule==="vagues"&&num(q.mo.w,0)<(G.wave||0))){G.monNet=q.mo;if(q.mo.d&&typeof q.mo.lk==="string")G.monKiller=q.mo.lk.slice(0,40);}
     if(Array.isArray(q.ms)&&G.mon)for(const s of q.ms.slice(0,30)){if(!Array.isArray(s))continue;const key=G.authPeer+":m"+num(s[0],0);if(G.seenShots.has(key))continue;G.seenShots.add(key);
       if(!has(MPROJ,s[1]))continue;G.proj.push(mkProj(Object.assign({owner:G.mon,kind:s[1]},MPROJ[s[1]],{x:clampX(num(s[2],0)),y:clampY(num(s[3],0)),vx:Math.max(-9,Math.min(9,num(s[4],0))),vy:Math.max(-9,Math.min(9,num(s[5],0)))})));}}}
   for(const F of G.remotes.values()){if(!present.has(F.peer)&&!F.dead){F.dead=true;F.deadT=0;addFeed(`${F.a.nom} a quitté la partie`);}
@@ -1247,18 +1279,19 @@ function sendNet(){const me=G.me,t=G.t;
     bf:(me.buffS>0?1:0)|(me.buffD>0?2:0)|(me.shield>0?4:0)|(me.jetOn?8:0),hk:me.hook?[r1(me.hook.x),r1(me.hook.y)]:null,mn:G.mines.filter(m=>m.local).slice(0,8).map(m=>[m.id,Math.round(m.x),Math.round(m.y)]),wb:me.web>0?1:0,s:G.myShots.map(s=>({i:s.i,x:s.x,y:s.y,f:s.f,b:s.b,d:s.d,o:s.o})),c:G.myCraters.map(c=>[c.i,c.x,c.y,c.r]),tk:G.myTaken.map(x=>x.id),md:r1(G.monDmg),rx:Object.fromEntries(Object.entries(G.dealt).slice(0,12).map(([k,v])=>[k,Math.round(v)]))};
   const bots=G.f.filter(F=>F.isBot&&!F.remote);if(bots.length)q.bots=bots.map(botState);
   if(isAuth()){q.it=G.items.slice(0,8).map(it=>({id:it.id,k:it.k,x:Math.round(it.x),y:Math.round(it.y)}));
-    const M=G.mon;if(M){q.mo={k:M.k,x:r1(M.x),y:r1(M.y),f:M.f,st:M.st,a:Math.round((M.ang||0)*100)/100,hp:r1(M.hp),mx:M.mx,d:M.dead?1:0,lk:M.dead?G.monKiller:null,sp:M.sp,bt:M.bite||0,seg:M.seg.slice(0,40)};
+    const M=G.mon;if(M){q.mo={k:M.k,x:r1(M.x),y:r1(M.y),f:M.f,st:M.st,a:Math.round((M.ang||0)*100)/100,hp:r1(M.hp),mx:M.mx,d:M.dead?1:0,w:G.wave||0,lk:M.dead?G.monKiller:null,sp:M.sp,bt:M.bite||0,seg:M.seg.slice(0,40)};
       q.ms=G.monShots.map(s=>[s.i,s.k,s.x,s.y,s.vx,s.vy]);}}
   NET.r.presence({g:q}).catch(()=>{});}
 function onlineHud(){
   G.players.forEach((peer,i)=>{const F=fighterOf(peer);const x=4+(i%4)*95,y=i<4?3:21,w=88;
-    const nm=F?F.a.nom:peerName(peer);txt(nm.toUpperCase().slice(0,12),x,y,5,F===G.me?"#ffb52e":"#ecebff","left");
+    const nm=F?F.a.nom:peerName(peer);txt(nm.toUpperCase().slice(0,12),x,y,5,G.rule==="equipes"&&F&&F.team!==undefined?TEAMC[F.team]:F===G.me?"#ffb52e":"#ecebff","left");
     g.fillStyle="#8B939C";g.fillRect(x-1,y+7,w+2,6);g.fillStyle="#000";g.fillRect(x,y+8,w,4);
     if(F){const r=F.hp/F.maxHp;g.fillStyle=F.dead?"#55506a":coulee(x,w);g.fillRect(x,y+8,Math.ceil(w*r),4);
       if(F.buffS>0){g.fillStyle="#ffd04a";g.fillRect(x+w-14,y,5,5);}if(F.buffD>0){g.fillStyle="#ff5c7a";g.fillRect(x+w-7,y,5,5);}}
     if(F&&F.dead)txt("K.O.",x+w,y,5,"#ff5c7a","right");});
   {const me=G.me,t=[];if(me.shield>0)t.push("BOUCLIER");if(me.jet>0)t.push("JETPACK "+Math.ceil(me.jet/60));if(me.spk)t.push((me.spk==="mine"?"MINES x":"GRAPPIN x")+me.spn);if(t.length)txt(t.join(" · "),6,203,5,"#a6e05a","left");}
-  if(!G.mon){const sec=Math.max(0,Math.ceil(G.timer/60));txt(String(sec),VW-6,203,7,sec<=10?"#ff5c7a":"#ecebff","right");}
+  if(G.rule==="vagues")txt(`VAGUE ${G.wave}`,VW-6,203,7,"#ffb52e","right");
+  else if(!G.mon){const sec=Math.max(0,Math.ceil(G.timer/60));txt(String(sec),VW-6,203,7,sec<=10?"#ff5c7a":"#ecebff","right");}
   if(G.phase==="fight"&&G.me.dead){txt(G.mon?"ÉLIMINÉ · TES AMIS CONTINUENT LE COMBAT":"ÉLIMINÉ · TU REGARDES LA FIN",VW/2,60,6,"#ff5c7a");
     if(G.spec)txt(`SPECTATEUR : ${G.spec.a.nom.toUpperCase()} · TIR OU TOUCHE L'ÉCRAN POUR CHANGER`,VW/2,70,5,"#ecebff");}}
 function updSpec(){if(!G.online||!G.me.dead){G.spec=null;return;}const al=G.f.filter(F=>F!==G.me&&!F.dead);if(!al.length){G.spec=null;return;}
