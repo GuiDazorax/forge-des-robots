@@ -613,8 +613,10 @@ function readInput(n,solo){const K=c=>keys.has(c);
 const MONS={
   ver:{nom:"VERMAGMA",sous:"LE VER DE LAVE",col:"#ff7a1a",hp:1.1},
   araignee:{nom:"TISSEUSE",sous:"L'ARAIGNÉE GÉANTE",col:"#c34cff",hp:.9},
-  kaiju:{nom:"KRONODON",sous:"LE TITAN AU RAYON",col:"#ff3fa4",hp:1.3}};
-const MONK=["ver","araignee","kaiju"];
+  kaiju:{nom:"KRONODON",sous:"LE TITAN AU RAYON",col:"#ff3fa4",hp:1.3},
+  mimic:{nom:"MIMIC",sous:"LA CAISSE QUI MORD",col:"#3fe0c4",hp:.8},
+  colosse:{nom:"COLOSSE",sous:"LE GÉANT DE FERRAILLE",col:"#c98a4a",hp:1.4}};
+const MONK=["ver","araignee","kaiju","mimic","colosse"];
 const ITEMS={soin:{nom:"+SOIN",c:"#3fe0c4"},vitesse:{nom:"VITESSE",c:"#ffd04a"},degats:{nom:"DÉGÂTS",c:"#ff5c7a"},bouclier:{nom:"BOUCLIER",c:"#7fd0ff"},jetpack:{nom:"JETPACK",c:"#ff9a3a"},mine:{nom:"MINES x3",c:"#c34cff"},grappin:{nom:"GRAPPIN x4",c:"#a6e05a"},composant:{nom:"COMPOSANT !",c:"#c9cfd6"},bouffe:{nom:"CONSERVE !",c:"#ff9a3a"},secret:{nom:"???",c:"#fff3b0"}};
 const ITK=Object.keys(ITEMS).filter(k=>!["composant","bouffe","secret"].includes(k));
 const MPROJ={
@@ -622,7 +624,8 @@ const MPROJ={
   web:{w:7,h:7,dmg:1,web:130,grav:.04,col:"#efeaff",life:120},
   bite:{w:26,h:26,dmg:12,pierce:true,life:6,col:"#ffffff"},
   mlaser:{w:8,h:3,dmg:4,pierce:true,drill:6,cr:6,col:"#ff3fa4",life:80},
-  shock:{w:16,h:10,dmg:6,pierce:true,life:45,col:"#ffd04a"}};
+  shock:{w:16,h:10,dmg:6,pierce:true,life:45,col:"#ffd04a"},
+  rock:{w:11,h:11,dmg:8,grav:.18,rad:18,col:"#8a7f70",life:320}};
 const r1=v=>Math.round(v*10)/10;
 function rng(seed){let s=(seed>>>0)||1;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};}
 
@@ -706,7 +709,7 @@ function carveRaw(x,y,r){const r2=r*r,a=Math.floor((x-r)/CS),b=Math.floor((x+r)/
     const dx=cx*CS+2-x,dy=cy*CS+2-y;if(dx*dx+dy*dy<=r2){TER.c[i]=0;any=true;}}
   if(any)for(let cy=Math.max(0,c0-1);cy<=Math.min(CH-1,d+1);cy++)for(let cx=Math.max(0,a-1);cx<=Math.min(CW-1,b+1);cx++)paintCell(cx,cy);
   return any;}
-function doCarve(x,y,r,broadcast){if(!(r>0))return;const any=carveRaw(x,y,r);
+function doCarve(x,y,r,broadcast){if(!(r>0))return;const any=carveRaw(x,y,r);if(any&&G)G.dug=(G.dug||0)+r;
   if(any&&G.fx.length<450)for(let i=0;i<3;i++)G.fx.push({x,y,vx:(Math.random()-.5)*3,vy:-Math.random()*2.5,life:24,c:i%2?TH.pal.dot:TH.pal.top,s:2});
   if(broadcast&&G.online){G.myCraters.push({i:++G.crN,x:Math.round(x),y:Math.round(y),r:Math.round(r),t:G.t});}}
 function surfaceY(x,from){x=Math.max(2,Math.min(WW-2,x));let y=Math.max(0,Math.floor(from||0));
@@ -772,8 +775,8 @@ function place(F,i,n){F.x=findGround(slotX(i,n));F.y=surfaceY(F.x,0);F.face=F.x<
 function makeGame(o){G=Object.assign({t:0,pt:0,f:[],proj:[],fx:[],feed:[],items:[],taken:new Set(),myTaken:[],itemT:300,shake:0,monDmg:0,remoteMd:{},
   myCraters:[],crN:0,seenCr:new Set(),myShots:[],shotN:0,seenShots:new Set(),monShots:[],msN:0,cam:{x:WW/2,y:WH/2,z:1},mon:null,mines:[],mineN:0,mineTag:Math.random().toString(36).slice(2,6),dealt:{},monBy:{},monLast:null,monKiller:null,prevMd:{},specI:0},o);}
 function setupRound(seed,th){G.seed=seed>>>0;const ft=window.__forceTheme;G.theme=has(THEMES,ft)?ft:has(THEMES,th)?th:pickTheme(G.seed);genTerrain(G.seed,G.theme);LIQY=LIQ0;G.envT=0;G.wind=0;G.proj=[];G.fx=[];G.items=[];G.mines=[];G.taken=new Set();G.myTaken=[];G.itemT=300;G.monDmg=0;
-  G.phase="intro";G.pt=0;G.shake=0;G.coop=false;G.win=null;G.timeout=false;
-  const r=rng(G.seed^0x5bd1e995);r();const roll=r(),kind=MONK[Math.floor(r()*3)],fm=window.__forceMon;G.pilot=null;G.mon=(fm||G.rule==="vagues"||G.mj?true:G.rule==="equipes"?roll<.2:roll<.4)?makeMonster(has(MONS,fm)?fm:kind,r):null;G.wave=0;
+  G.phase="intro";G.pt=0;G.shake=0;G.coop=false;G.win=null;G.timeout=false;G.dug=0;
+  const r=rng(G.seed^0x5bd1e995);r();const roll=r(),kind=MONK[Math.floor(r()*MONK.length)],fm=window.__forceMon;G.pilot=null;G.mon=(fm||G.rule==="vagues"||G.mj?true:G.rule==="equipes"?roll<.2:roll<.4)?makeMonster(has(MONS,fm)?fm:kind,r):null;G.wave=0;
   if(G.mon&&G.rule==="vagues"){G.wave=1;G.mon.mx=Math.round(G.mon.mx*waveMul(1));G.mon.hp=G.mon.mx;G.mon.base=0;}
   if(G.rule==="histoire")G.mon=G.storyLv&&G.storyLv.boss?makeMonster(G.storyLv.boss,r):null;
   if(G.mon&&G.mj){const hs=G.players.filter(x=>!x.includes("#b"));G.pilot=hs[Math.floor(r()*hs.length)];G.mon.mx=Math.round(G.mon.mx*1.25);G.mon.hp=G.mon.mx;}
@@ -901,7 +904,7 @@ function updFighter(F,inp,O){
     if(inp.shoot)F.charge++;else{if(F.charge>=55){fire(F,true);F.cd=WEAPONS[F.a.weapon].rate;}F.charge=0;}}
   if(F.inv>0)F.inv--;if(F.shootAnim>0)F.shootAnim--;}
 function nearestTarget(F){let O=null,bd=1e9;for(const T of G.f){if(T===F||T.dead||ally(F,T))continue;const d=Math.abs(T.x-F.x)+Math.abs(T.y-F.y);if(d<bd){bd=d;O=T;}}
-  const M=G.mon;if(M&&!M.dead&&M.st!=="attente"){const c=monCircles(M)[0];if(c){const d=Math.abs(c.x-F.x)+Math.abs(c.y-F.y);if(d<bd*1.1){bd=d;O={x:c.x,y:c.y+10,mon:true};}}}
+  const M=G.mon;if(M&&!M.dead&&M.st!=="attente"&&!mHid(M)){const c=monCircles(M)[0];if(c){const d=Math.abs(c.x-F.x)+Math.abs(c.y-F.y);if(d<bd*1.1){bd=d;O={x:c.x,y:c.y+10,mon:true};}}}
   return O;}
 
 const DIFF=[{think:1.3,fire:.025,dodge:.04,charge:.15,jump:.01},{think:.9,fire:.05,dodge:.1,charge:.25,jump:.02},{think:.5,fire:.09,dodge:.22,charge:.35,jump:.035}];
@@ -957,8 +960,13 @@ function makeMonster(k,r){const n=G.online?G.players.length:2;const mx=Math.roun
   const M={isMon:true,k,mx,hp:mx,x:WW/2,y:WH-8,vx:0,vy:0,f:1,st:"attente",t:0,cd:120,cd2:60,flash:0,dead:false,deadT:0,seg:[],hist:[],ang:0,sp:0,dist:0,bite:0,onGround:false};
   if(k==="araignee"){M.x=Math.round(WW*(.35+r()*.3));M.y=-140;}
   if(k==="kaiju"){const s=r()<.5?-1:1;M.x=s<0?-70:WW+70;M.f=-s;M.y=surfaceY(s<0?6:WW-6,0);}
+  if(k==="mimic"){M.x=findGround(Math.round(WW/2+(r()-.5)*500));M.y=-40;M.cd=150;M.cd2=90;}
+  if(k==="colosse"){M.x=findGround(Math.round(WW/2+(r()-.5)*400));M.y=surfaceY(M.x,0);M.sc=1;M.cd=120;M.cd2=160;M.cd3=360;}
   return M;}
+const mHid=M=>M.k==="mimic"&&(M.st==="cache"||M.st==="chute"||M.st==="entree");
 function monCircles(M){if(M.st==="attente")return [];
+  if(M.k==="mimic")return mHid(M)?[{x:M.x,y:M.y-6,r:8}]:M.st==="saute"&&M.y<0?[]:[{x:M.x,y:M.y-18,r:18}];
+  if(M.k==="colosse"){const s=M.sc||1;if(M.st==="entree"&&M.t<90)return [];return [{x:M.x+M.f*4*s,y:M.y-72*s,r:10*s},{x:M.x,y:M.y-46*s,r:22*s},{x:M.x,y:M.y-14*s,r:14*s}];}
   if(M.k==="ver"){const c=[{x:M.x,y:M.y,r:13}];for(let i=0;i+1<M.seg.length;i+=2)c.push({x:M.seg[i],y:M.seg[i+1],r:10});return c;}
   if(M.k==="araignee")return [{x:M.x-M.f*8,y:M.y-18,r:16},{x:M.x+M.f*9,y:M.y-14,r:10}];
   return [{x:M.x+M.f*20,y:M.y-72,r:14},{x:M.x,y:M.y-42,r:22},{x:M.x,y:M.y-14,r:15}];}
@@ -1039,17 +1047,74 @@ function updMonster(){const M=G.mon;if(!M)return;M.t++;if(M.flash>0)M.flash--;
   if(M.dead){M.deadT++;monDeathFx(M);return;}
   if(M.st!=="attente"){M.hp=Math.max(0,M.mx-(totalMonDmg()-(M.base||0)));if(M.hp<=0&&G.phase==="fight"){M.dead=true;M.deadT=0;G.monKiller=G.monLast;sfx("roar");G.shake=26;addFeed(`${MONS[M.k].nom} est vaincu !`);return;}}
   if(M.st==="attente"){if(G.phase!=="intro"||G.pt>=70){M.st="entree";M.t=0;sfx("roar");}else return;}
-  ({ver:aiVer,araignee:aiAraignee,kaiju:aiKaiju})[M.k](M);}
+  ({ver:aiVer,araignee:aiAraignee,kaiju:aiKaiju,mimic:aiMimic,colosse:aiColosse})[M.k](M);}
+// Mimic : tombe du ciel au milieu d'une pluie de caisses de soin, déguisé en caisse. Se révèle si on le touche ou si on lui tire dessus.
+function mimicCrates(cx,n){if(!isAuth())return;for(let i=0;i<n;i++)G.items.push({id:"k"+Math.random().toString(36).slice(2,8),k:"soin",x:Math.max(30,Math.min(WW-30,cx+(i-(n-1)/2)*(560/n)+(Math.random()-.5)*30)),y:-20-Math.random()*90,vy:.5});}
+function mimicFall(M){if(!solid(M.x,M.y+1)&&M.y<LIQY){M.y+=1.1;return false;}while(M.y>0&&solid(M.x,M.y))M.y--;return true;}
+function mimicReveal(M){M.st="morsure";M.t=0;M.revT=0;M.vy=-3;sfx("roar");sfx("bite");G.shake=18;M.sp++;addFeed("C'ÉTAIT LE MIMIC !");
+  for(const F of G.f)if(!F.dead&&!F.foe&&Math.abs(F.x-M.x)<36&&Math.abs(F.y-M.y)<40)monFire({kind:"bite",x:F.x,y:F.y-10});}
+function aiMimic(M){const T=monTarget(M),P=pilotIn();if(P)M.cdP=Math.max(0,(M.cdP||0)-1);
+  if(M.st==="entree"||M.st==="chute"){if(M.t===1)mimicCrates(M.x,M.st==="entree"?10:5);M.vy=1;if(mimicFall(M)){M.st="cache";M.t=0;M.hp0=M.hp;}return;}
+  if(M.st==="cache"){M.vy=0;const hit=M.hp<(M.hp0===undefined?M.hp:M.hp0);M.hp0=M.hp;
+    const touch=G.f.some(F=>!F.dead&&!F.foe&&!isPilotF(F)&&Math.abs(F.x-M.x)<12&&F.y>M.y-30&&F.y<M.y+10);
+    if(hit||touch||(P?P.ap:M.t>1500))mimicReveal(M);if(!mimicFall(M))M.y+=0;return;}
+  if(M.st==="saute"){M.y-=7;if(M.y<-60){M.x=P?Math.max(60,Math.min(WW-60,M.x+M.f*260)):findGround(Math.round(120+Math.random()*(WW-240)));M.y=-40;M.st="chute";M.t=0;}return;}
+  M.revT=(M.revT||0)+1;M.vy=Math.min(8,M.vy+.3);
+  if(M.st==="morsure"){M.vx*=.8;if(M.t>=30){M.st="chasse";M.t=0;}}
+  else if(M.st==="langue"){M.vx*=.7;if(M.t===6&&T&&Math.abs(T.x-M.x)<130&&Math.abs(T.y-M.y)<36&&Math.sign(T.x-M.x)===M.f)monFire({kind:"bite",x:T.x,y:T.y-10});if(M.t===4)sfx("web");if(M.t>=20){M.st="chasse";M.t=0;}}
+  else if(M.st==="bond"){if(M.onGround&&M.t>8){M.st="chasse";M.t=0;G.shake=16;M.sp++;sfx("stomp");for(const s2 of [-1,1])monFire({kind:"shock",x:M.x+s2*20,y:M.y-6,vx:s2*3.2,vy:0});}}
+  else{ // chasse
+    if(P){if(P.x){M.f=P.x;if(M.onGround&&M.t%14===0){M.vx=P.x*2.4;M.vy=-3;}}else if(M.onGround)M.vx*=.7;
+      if(P.jp&&M.onGround){M.st="bond";M.t=0;M.vy=-8.5;M.vx=M.f*3;sfx("jump");}
+      else if(P.ap&&M.cdP<=0){M.cdP=36;M.st="langue";M.t=0;}
+      else if(P.dp&&M.revT>300){M.st="saute";M.t=0;sfx("jump");}}
+    else if(T){const dx=T.x-M.x;M.f=dx>0?1:-1;M.cd--;M.cd2--;
+      if(M.revT>900){M.st="saute";M.t=0;sfx("jump");addFeed("Le Mimic se cache à nouveau…");}
+      else if(M.cd2<=0&&Math.abs(dx)<120&&Math.abs(T.y-M.y)<30){M.cd2=110;M.st="langue";M.t=0;}
+      else if(M.cd<=0&&M.onGround){M.cd=220;M.st="bond";M.t=0;M.vy=-8.5;M.vx=Math.max(-4,Math.min(4,dx/40));sfx("jump");}
+      else if(M.onGround&&M.t%40===0){M.vx=M.f*2.2;M.vy=-4.2;}
+      else if(M.onGround)M.vx*=.8;}}
+  moveBody(M,14,26,6);M.x=Math.max(16,Math.min(WW-16,M.x));}
+// Colosse de ferraille : s'assemble avec des morceaux arrachés au décor, les lance, et se répare en mangeant le terrain.
+function colPow(){return 1+Math.min(1,(G.dug||0)/2500);}
+function colHeal(M,f){const tot=totalMonDmg();M.base=Math.min(tot,(M.base||0)+M.mx*f);}
+function colThrow(M,T){const sx=M.x+M.f*26*(M.sc||1),sy=M.y-80*(M.sc||1),dx=T.x-sx,dy=T.y-12-sy,fr=Math.max(30,Math.min(70,Math.abs(dx)/5));
+  const o={kind:"rock",x:sx,y:sy,vx:dx/fr,vy:dy/fr-.5*.18*fr};const pr=MPROJ.rock;G.proj.push(mkProj(Object.assign({owner:M},pr,o,{dmg:Math.round(pr.dmg*(M.pow||1))})));
+  if(G.online)G.monShots.push({i:++G.msN,k:"rock",x:r1(o.x),y:r1(o.y),vx:r1(o.vx),vy:r1(o.vy),t:G.t});sfx("spit");}
+function aiColosse(M){const T=monTarget(M),P=pilotIn();M.pow=colPow();M.sc=1+.3*(M.pow-1);
+  if(M.st==="entree"){M.y=groundFollow(M);if(M.t===1)sfx("rumble");
+    if(M.t<120&&M.t%5===0){const sx=Math.max(10,Math.min(WW-10,M.x+(Math.random()-.5)*700)),sy=surfaceY(sx,0);if(sy<LIQY-6)doCarve(sx,sy+3,7,true);G.shake=Math.max(G.shake,4);}
+    if(M.t===130){sfx("roar");G.shake=26;M.sp++;for(const s2 of [-1,1])monFire({kind:"shock",x:M.x+s2*24,y:M.y-6,vx:s2*3.4,vy:0});}
+    if(M.t>=160){M.st="marche";M.t=0;}return;}
+  M.cd--;M.cd2--;M.cd3--;
+  if(M.st==="marche"){
+    if(P){if(P.x){M.f=P.x;M.x+=P.x*.8;}
+      if(P.ap&&M.cd<=0&&T){M.st="arrache";M.t=0;}else if(P.jp&&M.cd2<=0){M.st="frappe";M.t=0;}else if(P.dp&&M.cd3<=0){M.st="repare";M.t=0;}}
+    else if(T){const dx=T.x-M.x;M.f=dx>0?1:-1;if(Math.abs(dx)>70)M.x+=M.f*.6;
+      if(M.cd2<=0&&Math.abs(dx)<70&&Math.abs(T.y-M.y)<60){M.st="frappe";M.t=0;}
+      else if(M.cd3<=0&&M.hp<M.mx*.85){M.st="repare";M.t=0;}
+      else if(M.cd<=0&&Math.abs(dx)<480){M.st="arrache";M.t=0;}}
+    if(M.t%46===0){M.sp++;G.shake=Math.max(G.shake,4);sfx("stomp");}
+    if(M.t%12===0&&solid(M.x+M.f*24,M.y-30))doCarve(M.x+M.f*24,M.y-30,14,true);
+    M.x=Math.max(30,Math.min(WW-30,M.x));M.y=groundFollow(M);}
+  else if(M.st==="arrache"){M.y=groundFollow(M);if(M.t===18){const gx=M.x+M.f*30,gy=surfaceY(gx,M.y-40);doCarve(gx,gy+4,11,true);sfx("boom");G.shake=Math.max(G.shake,8);}
+    if(M.t===34&&T)colThrow(M,T);if(M.t>=50){M.st="marche";M.t=0;M.cd=Math.round((P?60:130)/M.pow);}}
+  else if(M.st==="frappe"){M.y=groundFollow(M);if(M.t===1)sfx("charge");
+    if(M.t===32){G.shake=24;M.sp++;sfx("stomp");for(const s2 of [-1,1]){doCarve(M.x+s2*26,M.y+2,11,true);monFire({kind:"shock",x:M.x+s2*30,y:M.y-6,vx:s2*3.6,vy:0});}}
+    if(M.t>=55){M.st="marche";M.t=0;M.cd2=P?120:170;}}
+  else if(M.st==="repare"){M.y=groundFollow(M);
+    if(M.t%15===0&&M.t<=60){const gx=M.x+(Math.random()-.5)*120,gy=surfaceY(gx,M.y-60);if(gy<LIQY-6){doCarve(gx,gy+3,9,true);colHeal(M,.03);}}
+    if(M.t>=70){M.st="marche";M.t=0;M.cd3=P?300:420;}}}
 function netMonster(M){const n=G.monNet;if(M.dead){M.deadT++;monDeathFx(M);}if(!n)return;
   if(n.st!==M.st&&M.st==="attente")sfx("roar");
   if(num(n.sp,0)!==M.sp){G.shake=Math.max(G.shake,12);sfx("stomp");M.sp=num(n.sp,0);}
-  M.st=typeof n.st==="string"?n.st.slice(0,10):M.st;M.f=n.f<0?-1:1;M.ang=num(n.a,0);M.bite=num(n.bt,0);
+  M.st=typeof n.st==="string"?n.st.slice(0,10):M.st;M.f=n.f<0?-1:1;M.ang=num(n.a,0);M.bite=num(n.bt,0);if(n.sc)M.sc=Math.max(1,Math.min(1.4,num(n.sc,1)));M.pow=1+(M.sc-1)/.3||1;
   const nx=num(n.x,M.x),ny=num(n.y,M.y),far=Math.abs(nx-M.x)>80||Math.abs(ny-M.y)>80;M.x=far?nx:M.x+(nx-M.x)*.35;M.y=far?ny:M.y+(ny-M.y)*.35;
   if(Array.isArray(n.seg))M.seg=n.seg.slice(0,40).map(v=>num(v,0));
   M.mx=Math.max(1,num(n.mx,M.mx));M.hp=Math.max(0,Math.min(M.mx,num(n.hp,M.hp)));
   if(n.d&&!M.dead){M.dead=true;M.deadT=0;sfx("roar");G.shake=26;addFeed(`${MONS[M.k].nom} est vaincu !`);}}
-function monContact(){const M=G.mon;if(!M||M.dead||M.st==="attente"||G.phase!=="fight")return;
-  for(const F of G.f){if(F.remote||F.dead||F.inv>0||F.foe)continue;for(const c of monCircles(M)){const dx=F.x-c.x,dy=F.y-10-c.y;if(dx*dx+dy*dy<(c.r+6)*(c.r+6)){damage(F,M.k==="ver"?8:5,Math.sign(dx)||1,M);break;}}}}
+function monContact(){const M=G.mon;if(!M||M.dead||M.st==="attente"||G.phase!=="fight"||mHid(M))return;
+  for(const F of G.f){if(F.remote||F.dead||F.inv>0||F.foe)continue;for(const c of monCircles(M)){const dx=F.x-c.x,dy=F.y-10-c.y;if(dx*dx+dy*dy<(c.r+6)*(c.r+6)){damage(F,M.k==="ver"?8:M.k==="colosse"?Math.round(7*(M.pow||1)):5,Math.sign(dx)||1,M);break;}}}}
 
 // ---------- Projectiles ----------
 function terrainHit(p){const k=p.kind,o=ownsLocally(p.owner);
@@ -1380,7 +1445,36 @@ function drawKaiju(M){const x=Math.round(M.x),y=Math.round(M.y),f=M.f;const P=(p
   if(M.st==="rayon"){g.fillStyle=G.t%4<2?"#fff":C;g.beginPath();g.arc(x+f*34,y-66,6,0,7);g.fill();}}
 function drawMonster(M,ghost){if(M.st==="attente")return;if(M.dead&&M.deadT>100)return;
   g.globalAlpha=ghost?.28:(M.dead?Math.max(0,1-M.deadT/100):(M.flash>0&&M.flash%2?.55:1));
-  if(M.k==="ver")drawVer(M);else if(M.k==="araignee")drawAraignee(M);else drawKaiju(M);g.globalAlpha=1;}
+  if(M.k==="ver")drawVer(M);else if(M.k==="araignee")drawAraignee(M);else if(M.k==="mimic")drawMimic(M);else if(M.k==="colosse")drawColosse(M);else drawKaiju(M);g.globalAlpha=1;}
+function drawMimic(M){const x=Math.round(M.x),y=Math.round(M.y),f=M.f;
+  if(mHid(M)){drawItem({k:"soin",x,y,vy:M.st==="cache"?0:1});if(M.st==="cache"&&G.t%260<7){g.fillStyle="#ffd04a";g.fillRect(x-3,y-8,1,1);g.fillRect(x+2,y-8,1,1);}return;}
+  const P=(px,py,w,h,c)=>{g.fillStyle=c;g.fillRect(f>0?x+px:x-px-w,y+py,w,h);};
+  const T="#3fe0c4",D="#1b6f62",O="#0a0a16",W="#f3ecd8",K="#5a0f2a";
+  const open=M.st==="morsure"?12+Math.sin(M.t*.6)*3:M.st==="langue"?10:M.st==="bond"?8:4+Math.round(Math.abs(Math.sin(G.t*.12))*3);
+  const lg=M.onGround&&Math.abs(M.vx)>.3?Math.floor(G.t/5)%2*2:0;
+  P(-14,-7,5,7-lg,O);P(-13,-7,3,6-lg,D);P(-4,-7,5,7,O);P(-3,-7,3,6,D);P(6,-7,5,7-(2-lg),O);P(7,-7,3,6-(2-lg),D);
+  P(-18,-30,36,24,O);P(-17,-29,34,22,T);P(-17,-22,34,2,D);P(-3,-27,6,16,"#ffffff");P(-8,-22,16,6,"#ffffff");
+  P(-16,-30-open,32,open,K);for(let i=0;i<6;i++){P(-15+i*5,-30-3,3,3,W);P(-13+i*5,-30-open,3,3,W);}
+  P(-18,-38-open,36,9,O);P(-17,-37-open,34,7,T);P(-17,-32-open,34,2,D);P(9,-36-open,5,3,"#ffd04a");P(11,-35-open,2,1,O);
+  if(M.st==="langue"){const L=Math.min(110,M.t*14);P(16,-28-open/2,L,3,"#ff5c9a");P(16+L,-30-open/2,5,6,"#ff5c9a");}}
+function drawColosse(M){const s=M.sc||1,x=Math.round(M.x),y=Math.round(M.y),f=M.f,pal=TH.pal;
+  g.save();g.translate(x,y);g.scale(s*f,s);const P=(px,py,w,h,c)=>{g.fillStyle=c;g.fillRect(px,py,w,h);};
+  const A="#7a6552",R2=pal.a,TP=pal.top,Me="#8B939C",Ru="#b4552a",O="#0a0a16",C=G.t%20<10?"#ff6a1a":"#ffb52e";
+  if(M.st==="entree"){const k=Math.min(1,M.t/120);
+    for(let i=0;i<26;i++){const a=i*2.4+M.t*.05*(1-k),d=(1-k)*(160+(i*37)%140);const px=Math.cos(a)*d,py=-40+Math.sin(a)*d*.6-(1-k)*60;P(px-4,py-4,8+(i%3)*2,7,i%3?A:Me);P(px-4,py-4,8,1,O);}
+    if(k<.75){g.restore();return;}g.globalAlpha*=Math.min(1,(k-.75)*4);}
+  const wk=M.st==="marche"?Math.round(Math.sin(M.t*.14)*3):0,arm=M.st==="arrache"||M.st==="frappe"?-26:M.st==="repare"?14:0;
+  P(-18,-24-wk,13,24+wk,O);P(-17,-23-wk,11,23+wk,R2);P(5,-24+wk,13,24-wk,O);P(6,-23+wk,11,23-wk,R2);P(-19,-4,15,4,Me);P(4,-4,15,4,Me);
+  P(-31,-60,11,30,O);P(-30,-59,9,28,A);P(-31,-33,12,10,Me);
+  P(-20,-32,40,10,O);P(-19,-31,38,8,Me);P(-19,-28,38,1,Ru);
+  P(-24,-66,48,36,O);P(-23,-65,46,34,A);P(-23,-65,46,3,TP);P(-18,-58,12,8,R2);P(8,-46,12,9,R2);P(-20,-40,8,6,Ru);P(14,-62,7,5,Me);
+  P(-6,-55,12,12,O);P(-5,-54,10,10,C);P(-2,-51,4,4,"#fff3b0");
+  g.strokeStyle=Me;g.lineWidth=1.5;g.beginPath();g.moveTo(-23,-50);g.lineTo(-30,-47);g.moveTo(20,-36);g.lineTo(27,-40);g.stroke();
+  P(-10,-80,20,16,O);P(-9,-79,18,14,R2);P(-9,-79,18,2,TP);P(2,-74,7,3,C);
+  const ay=-60+arm;P(20,ay,11,30,O);P(21,ay+1,9,28,A);P(19,ay+(arm<0?-8:26),13,10,Me);
+  if(M.st==="arrache"&&M.t>18&&M.t<34){P(17,ay-20,16,14,O);P(18,ay-19,14,12,TP);}
+  if(M.st==="repare"){P(25,-30,8,6,TP);}
+  g.restore();}
 function drawItem(it){const I=ITEMS[it.k],x=Math.round(it.x),y=Math.round(it.y),b=it.vy>0?0:Math.round(Math.sin(G.t*.1)*1.5);
   if(it.vy>0){g.fillStyle="#ecebff";g.fillRect(x-8,y-22,16,3);g.fillRect(x-9,y-20,2,2);g.fillRect(x+7,y-20,2,2);g.fillStyle="#a2a5cf";g.fillRect(x-7,y-19,1,8);g.fillRect(x+6,y-19,1,8);}
   g.fillStyle="#0a0a16";g.fillRect(x-6,y-12+b,12,12);g.fillStyle=I.c;g.fillRect(x-5,y-11+b,10,10);g.fillStyle="#0a0a16";const Y=y-9+b;
@@ -1451,7 +1545,7 @@ let specVis=false;function render(){const hold=G.online?G.me:G.f[0];const sv=!!(
     const me=G.me;if(me.charge>15){const k=Math.min(1,me.charge/55);g.fillStyle="#0a0a16";g.fillRect(me.x-11,me.y+3,22,3);g.fillStyle=k>=1?"#ffffff":me.a.visor;g.fillRect(me.x-10,me.y+4,Math.round(20*k),1);}}
   // ---- interface ----
   g.setTransform(2,0,0,2,0,0);
-  if(M&&!M.dead&&M.st!=="attente"){const cc=monCircles(M)[0];if(cc)edgeArrow(cc.x,cc.y,MONS[M.k].col);}
+  if(M&&!M.dead&&M.st!=="attente"&&!mHid(M)){const cc=monCircles(M)[0];if(cc)edgeArrow(cc.x,cc.y,MONS[M.k].col);}
   if(G.online)for(const F of G.f)if(F!==G.me&&!F.dead)edgeArrow(F.x,F.y-12,F.a.prim);
   if(G.online)onlineHud();else if(G.st)hpBar(G.f[0],8,false);else{hpBar(G.f[0],8,false);hpBar(G.f[1],VW-138,true);
     if(M)txt(G.rule==="vagues"?`VAGUE ${G.wave}`:"ÉQUIPE",VW/2,10,8,G.rule==="vagues"?"#ffb52e":"#3fe0c4");else{const sec=Math.ceil(G.timer/60);txt(String(Math.max(0,sec)).padStart(2,"0"),VW/2,8,12,sec<=10?"#ff5c7a":"#ecebff");}}
@@ -1464,7 +1558,7 @@ let specVis=false;function render(){const hold=G.online?G.me:G.f[0];const sv=!!(
     if(M){const a=G.pt<200&&G.pt%20<10;if(a){g.fillStyle="#ff2d5555";g.fillRect(0,0,VW,VH);}
       g.fillStyle="#ff2d55";for(let x=-20+(G.pt%20);x<VW;x+=20){g.fillRect(x,0,10,6);g.fillRect(x,VH-6,10,6);}
       if(G.pt<120)txt("ALERTE MONSTRE",VW/2,70,14,G.pt%20<10?"#ff2d55":"#ffffff");
-      else if(G.pt<G.introLen-40){txt(MONS[M.k].nom,VW/2,60,20,MONS[M.k].col);txt(MONS[M.k].sous,VW/2,88,7,"#ecebff");txt(G.rule==="vagues"?"COOP : TENEZ LE PLUS DE VAGUES POSSIBLE":G.pilot?(G.pilot===G.me.peer?"C'EST TOI QUI LE CONTRÔLES ! ÉLIMINE TOUS LES ROBOTS":`PILOTÉ PAR ${peerName(G.pilot).toUpperCase()} : ABATTEZ-LE ENSEMBLE`):"TUEZ-LE ENSEMBLE : S'IL TOMBE, TOUT LE MONDE GAGNE",VW/2,104,5,"#ffb52e");}
+      else if(G.pt<G.introLen-40){txt(MONS[M.k].nom,VW/2,60,20,MONS[M.k].col);txt(MONS[M.k].sous,VW/2,88,7,"#ecebff");if(M.k==="mimic")txt("UNE DE CES CAISSES DE SOIN N'EN EST PAS UNE…",VW/2,116,5,"#3fe0c4");if(M.k==="colosse")txt("PLUS L'ARÈNE EST DÉTRUITE, PLUS IL EST FORT",VW/2,116,5,"#c98a4a");txt(G.rule==="vagues"?"COOP : TENEZ LE PLUS DE VAGUES POSSIBLE":G.pilot?(G.pilot===G.me.peer?"C'EST TOI QUI LE CONTRÔLES ! ÉLIMINE TOUS LES ROBOTS":`PILOTÉ PAR ${peerName(G.pilot).toUpperCase()} : ABATTEZ-LE ENSEMBLE`):"TUEZ-LE ENSEMBLE : S'IL TOMBE, TOUT LE MONDE GAGNE",VW/2,104,5,"#ffb52e");}
       else txt("PRÊTS ?",VW/2,90,12,"#ffb52e");}
     else{txt(G.st?`CHAPITRE ${G.st.lv.ch} · NIVEAU ${G.st.lv.id}`:`ARÈNE : ${TH.nom.toUpperCase()}`,VW/2,62,7,"#3fe0c4");txt(G.st?G.st.lv.nom.toUpperCase():G.online?`${G.players.length} ROBOTS`:`MANCHE ${G.round}`,VW/2,80,14,"#ecebff");if(G.pt>40)txt("PRÊTS ?",VW/2,104,10,"#ffb52e");}}
   if(G.phase==="fight"&&G.pt<40)txt("COMBAT !",VW/2,90,16,"#ffb52e");
@@ -1598,7 +1692,7 @@ function syncNet(){const peers=NET.r.peers();const seenB=new Set();const present
   if(G.rule==="histoire")for(const [id,R] of G.remotes)if(R.foe&&!seenB.has(id)){G.remotes.delete(id);G.f=G.f.filter(x=>x!==R);}
   G.present=present;G.authPeer=G.players.find(x=>present.has(x))||G.me.peer;
   if(!isAuth()){const q=G.netG.get(G.authPeer);if(q){
-    if(Array.isArray(q.it))G.items=q.it.slice(0,16).filter(o=>o&&typeof o.id==="string"&&has(ITEMS,o.k)&&!G.taken.has(o.id)).map(o=>{const old=G.items.find(i=>i.id===o.id);return {id:o.id.slice(0,12),k:o.k,x:clampX(num(o.x,0)),y:old?old.y+(clampY(num(o.y,0))-old.y)*.3:clampY(num(o.y,0)),vy:0};});
+    if(Array.isArray(q.it))G.items=q.it.slice(0,24).filter(o=>o&&typeof o.id==="string"&&has(ITEMS,o.k)&&!G.taken.has(o.id)).map(o=>{const old=G.items.find(i=>i.id===o.id);return {id:o.id.slice(0,12),k:o.k,x:clampX(num(o.x,0)),y:old?old.y+(clampY(num(o.y,0))-old.y)*.3:clampY(num(o.y,0)),vy:0};});
     if(G.st&&q.sw)G.st.win=true;
     if(q.mo&&typeof q.mo==="object"&&G.rule==="vagues"&&num(q.mo.w,0)>(G.wave||0)&&num(q.mo.w,0)<200&&has(MONS,q.mo.k))spawnWave(q.mo.k,num(q.mo.w,1));
     if(q.mo&&typeof q.mo==="object"&&!(G.rule==="vagues"&&num(q.mo.w,0)<(G.wave||0))){G.monNet=q.mo;if(q.mo.d&&typeof q.mo.lk==="string")G.monKiller=q.mo.lk.slice(0,40);}
@@ -1615,8 +1709,8 @@ function sendNet(){const me=G.me,t=G.t;
     bf:(me.buffS>0?1:0)|(me.buffD>0?2:0)|(me.shield>0?4:0)|(me.jetOn?8:0),hk:me.hook?[r1(me.hook.x),r1(me.hook.y)]:null,mn:G.mines.filter(m=>m.local).slice(0,8).map(m=>[m.id,Math.round(m.x),Math.round(m.y)]),wb:me.web>0?1:0,s:G.myShots.map(s=>({i:s.i,x:s.x,y:s.y,f:s.f,b:s.b,d:s.d,o:s.o})),c:G.myCraters.map(c=>[c.i,c.x,c.y,c.r]),tk:G.myTaken.map(x=>x.id),md:r1(G.monDmg),rx:Object.fromEntries(Object.entries(G.dealt).slice(0,12).map(([k,v])=>[k,Math.round(v)]))};
   const bots=G.f.filter(F=>F.isBot&&!F.remote);if(bots.length)q.bots=bots.map(botState);
   if(G.pilot===me.peer){q.mi=pilotBits(readInput(0,true))|(G.miAcc||0);G.miAcc=0;}
-  if(isAuth()){if(G.st&&G.st.win)q.sw=1;q.it=G.items.slice(0,16).map(it=>({id:it.id,k:it.k,x:Math.round(it.x),y:Math.round(it.y)}));
-    const M=G.mon;if(M){q.mo={k:M.k,x:r1(M.x),y:r1(M.y),f:M.f,st:M.st,a:Math.round((M.ang||0)*100)/100,hp:r1(M.hp),mx:M.mx,d:M.dead?1:0,w:G.wave||0,lk:M.dead?G.monKiller:null,sp:M.sp,bt:M.bite||0,seg:M.seg.slice(0,40)};
+  if(isAuth()){if(G.st&&G.st.win)q.sw=1;q.it=G.items.slice(0,24).map(it=>({id:it.id,k:it.k,x:Math.round(it.x),y:Math.round(it.y)}));
+    const M=G.mon;if(M){q.mo={k:M.k,x:r1(M.x),y:r1(M.y),f:M.f,st:M.st,a:Math.round((M.ang||0)*100)/100,hp:r1(M.hp),mx:M.mx,d:M.dead?1:0,w:G.wave||0,lk:M.dead?G.monKiller:null,sp:M.sp,bt:M.bite||0,sc:M.sc?Math.round(M.sc*100)/100:undefined,seg:M.seg.slice(0,40)};
       q.ms=G.monShots.map(s=>[s.i,s.k,s.x,s.y,s.vx,s.vy]);}}
   NET.r.presence({g:q}).catch(()=>{});}
 function onlineHud(){
@@ -1630,7 +1724,7 @@ function onlineHud(){
   if(G.rule==="vagues")txt(`VAGUE ${G.wave}`,VW-6,203,7,"#ffb52e","right");
   else if(!G.mon&&!G.st){const sec=Math.max(0,Math.ceil(G.timer/60));txt(String(sec),VW-6,203,7,sec<=10?"#ff5c7a":"#ecebff","right");}
   if(G.pilot&&G.mon){const me=G.pilot===G.me.peer;if(G.phase==="fight"&&G.pt<400)txt(me?"TU ES LE MONSTRE ! ÉLIMINE TOUS LES ROBOTS":`${peerName(G.pilot).toUpperCase()} CONTRÔLE LE MONSTRE`,VW/2,G.st?50:40,6,MONS[G.mon.k].col);
-    if(me&&G.phase==="fight"){txt({ver:"← → RAMPER · SAUT : SURGIR · TIR : CRACHER · DASH : REPLONGER",araignee:"← → MARCHER · SAUT · TIR : TOILE · DASH : MORSURE",kaiju:"← → MARCHER · TIR : RAYON · SAUT : SAUT ÉCRASANT"}[G.mon.k],VW/2,192,5,"#ecebff");}}
+    if(me&&G.phase==="fight"){txt({ver:"← → RAMPER · SAUT : SURGIR · TIR : CRACHER · DASH : REPLONGER",araignee:"← → MARCHER · SAUT · TIR : TOILE · DASH : MORSURE",kaiju:"← → MARCHER · TIR : RAYON · SAUT : SAUT ÉCRASANT",mimic:G.mon.st==="cache"?"CACHÉ · TIR : TE RÉVÉLER ET MORDRE":"← → SAUTILLER · SAUT : BOND · TIR : LANGUE · DASH : TE CACHER",colosse:"← → MARCHER · TIR : LANCER UN ROC · SAUT : FRAPPE AU SOL · DASH : SE RÉPARER"}[G.mon.k],VW/2,192,5,"#ecebff");}}
   if(G.phase==="fight"&&G.me.dead&&G.pilot!==G.me.peer){txt(G.mon?"ÉLIMINÉ · TES AMIS CONTINUENT LE COMBAT":"ÉLIMINÉ · TU REGARDES LA FIN",VW/2,60,6,"#ff5c7a");
     if(G.spec)txt(`SPECTATEUR : ${G.spec.a.nom.toUpperCase()} · TIR OU TOUCHE L'ÉCRAN POUR CHANGER`,VW/2,70,5,"#ecebff");}}
 function updSpec(){if(!G.online||!G.me.dead||G.pilot===G.me.peer){G.spec=null;return;}const al=G.f.filter(F=>F!==G.me&&!F.dead&&!F.foe);if(!al.length){G.spec=null;return;}
