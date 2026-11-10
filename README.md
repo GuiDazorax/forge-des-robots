@@ -8,12 +8,13 @@ Jeu de combat de robots en pixel art, pour Android. Crée ton robot (couleurs, c
 
 ## Contenu
 
-- 6 arènes destructibles (ville, forêt, montagne, volcan, mer, arctique) avec leurs effets : lave qui monte, marée, vent, glace. Le fond de l'arène est mortel.
+- 6 arènes destructibles et 2 fois plus grandes, avec des étages de plateformes, des tours et des falaises (ville, forêt, montagne, volcan, mer, arctique) avec leurs effets : lave qui monte, marée, vent, glace. Le fond de l'arène est mortel.
 - Règles : chacun pour soi, équipes rouge contre bleue, vagues de monstres en coop.
 - Mode histoire (chapitre 1, 6 missions), en solo ou en coop Bluetooth. Un secret se cache dans la première mission.
 - Option « monstre joueur » : à 3 vrais joueurs ou plus, un joueur tiré au sort contrôle le monstre.
 - Jetpack à acheter à l'atelier (réservoir qui se recharge au sol).
-- Monstres géants, bonus et objets spéciaux (bouclier, jetpack, mines, grappin).
+- Visée libre : glisse le pouce sur TIR (téléphone) ou vise à la souris.
+- 6 monstres géants (dont le Mimic, le Colosse de ferraille et la Soucoupe pilleuse), bonus et objets spéciaux (bouclier, jetpack, mines, grappin).
 - Robots ordinateur pour compléter une partie, tableau des scores, mode spectateur.
 - Pièces gagnées selon ta place parmi les vrais joueurs (12/8/4/2 à 4 joueurs ou plus, 6/4/2 à 3, 2/1 à 2, 1 seul contre l'IA) pour débloquer casques, finitions et canons.
 - Musique chiptune originale et vibrations.
