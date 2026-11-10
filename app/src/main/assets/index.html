@@ -130,6 +130,7 @@ kbd{font-family:var(--body);font-weight:700;font-size:12px;background:var(--bg);
   #atelier>.panel{order:-1}
 }
 .note{font-size:13px;color:var(--muted)}
+.prefs .btn{font-size:18px;padding:8px 12px}.prefs .btn[aria-pressed="false"],#musBtn2[aria-pressed="false"]{opacity:.55}
 .code{font-family:var(--display);color:var(--accent);font-size:26px;letter-spacing:3px;margin-left:8px}
 #codeIn{width:130px;text-transform:uppercase;font-family:var(--display);font-size:24px;letter-spacing:3px;padding:4px 10px}
 .online{display:flex;flex-direction:column;gap:12px;border-top:2px dashed var(--line);padding-top:14px}
@@ -157,6 +158,7 @@ kbd{font-family:var(--body);font-weight:700;font-size:12px;background:var(--bg);
       <p class="slogan">Forge ton robot. Fais trembler l'arène.</p>
       <p class="tag">Assemble ton robot de combat pixel, règle son armure, son casque, son canon et ses stats, puis envoie-le dans l'arène contre l'ordinateur ou un ami.</p>
     </div>
+    <div class="row prefs"><button class="btn ghost" id="musBtn" aria-pressed="true">Musique : oui</button><button class="btn ghost" id="vibBtn" aria-pressed="true">Vibrations : oui</button></div>
   </header>
 
   <section id="atelier" class="wrap" style="gap:20px">
@@ -263,7 +265,7 @@ kbd{font-family:var(--body);font-weight:700;font-size:12px;background:var(--bg);
   <section id="combat" hidden>
     <div class="bar-top">
       <h2 id="matchTitle">Combat</h2>
-      <div class="row"><button class="btn ghost" id="pauseBtn">Pause</button><button class="btn ghost" id="quitBtn">Quitter</button></div>
+      <div class="row"><button class="btn ghost" id="musBtn2" aria-label="Musique">♪</button><button class="btn ghost" id="pauseBtn">Pause</button><button class="btn ghost" id="quitBtn">Quitter</button></div>
     </div>
     <div class="screen">
       <canvas id="game" width="768" height="432"></canvas>
@@ -428,6 +430,55 @@ function sfx(type){try{if(!AC)return;const t=AC.currentTime,o=AC.createOscillato
   else if(type==="charge")set(100,900,.9,.06,"sawtooth");else if(type==="rumble")set(60,40,1,.12,"sawtooth");else if(type==="spit")set(250,120,.2,.07,"square");else if(type==="zap")set(1200,600,.06,.03,"square");
 }catch(e){}}
 
+// ---------- Musique chiptune originale (séquenceur pas à pas) ----------
+// Chaque piste : 4 mesures de 16 doubles-croches. lead = demi-tons depuis la tonique (null = silence), basses et arpèges suivent les accords.
+const _=null;
+const TRACKS={
+  menu:{bpm:96,root:57,chords:[[0,"m"],[-4,"M"],[3,"M"],[-2,"M"]],kick:[0,8],snare:[],hat:[2,6,10,14],arp:true,
+    lead:[12,_,_,15,_,_,19,_,17,_,15,_,14,_,_,_, 20,_,_,19,_,_,17,_,15,_,17,_,19,_,_,_, 19,_,_,22,_,_,24,_,22,_,19,_,15,_,_,_, 17,_,_,15,_,_,14,_,10,_,14,_,15,_,_,_]},
+  combat:{bpm:140,root:52,chords:[[0,"m"],[-4,"M"],[-2,"M"],[-5,"m"]],kick:[0,8,10],snare:[4,12],hat:[0,2,4,6,8,10,12,14],pump:true,
+    lead:[12,_,12,15,_,19,_,17,15,_,14,_,15,_,_,_, 12,_,12,15,_,19,_,22,20,_,19,_,15,_,_,_, 22,_,22,24,_,26,_,24,22,_,19,_,17,_,_,_, 19,_,15,_,14,_,15,_,19,_,22,_,23,_,_,_]},
+  monstre:{bpm:150,root:50,chords:[[0,"m"],[0,"m"],[1,"d"],[-1,"d"]],kick:[0,3,8,11],snare:[4,12],hat:[2,6,10,14],chug:true,
+    lead:[12,_,_,_,13,_,_,_,12,_,_,_,11,_,_,_, 15,_,_,_,16,_,_,_,15,_,_,_,14,_,_,_, 15,_,_,14,_,_,13,_,12,_,_,_,_,_,_,_, 18,_,17,_,16,_,15,_,14,_,13,_,12,_,_,_]}};
+const TRANSPOSE={ville:0,foret:2,montagne:-2,volcan:-3,mer:5,arctique:7};
+const CHORD={m:[0,3,7],M:[0,4,7],d:[0,3,6]};
+const MUS={on:true,cur:null,tr:0,step:0,next:0,gain:null,noise:null,started:false};
+try{MUS.on=localStorage.getItem("fdr-musique")!=="0";}catch(e){}
+let VIB=true;try{VIB=localStorage.getItem("fdr-vib")!=="0";}catch(e){}
+function buzz(ms){if(!VIB)return;try{if(window.AndroidBT&&AndroidBT.vibrate)AndroidBT.vibrate(ms);else if(navigator.vibrate)navigator.vibrate(ms);}catch(e){}}
+function mNote(f,t,d,v,type){const o=AC.createOscillator(),gn=AC.createGain();o.type=type;o.frequency.setValueAtTime(f,t);o.connect(gn);gn.connect(MUS.gain);
+  gn.gain.setValueAtTime(v,t);gn.gain.setValueAtTime(v,t+d*.6);gn.gain.exponentialRampToValueAtTime(.0008,t+d);o.start(t);o.stop(t+d+.02);}
+function mNoise(t,d,v,hp){if(!MUS.noise){const b=AC.createBuffer(1,AC.sampleRate*.3,AC.sampleRate),a=b.getChannelData(0);for(let i=0;i<a.length;i++)a[i]=Math.random()*2-1;MUS.noise=b;}
+  const s=AC.createBufferSource(),f=AC.createBiquadFilter(),gn=AC.createGain();s.buffer=MUS.noise;f.type="highpass";f.frequency.value=hp;s.connect(f);f.connect(gn);gn.connect(MUS.gain);
+  gn.gain.setValueAtTime(v,t);gn.gain.exponentialRampToValueAtTime(.0008,t+d);s.start(t);s.stop(t+d+.02);}
+const hz=n=>440*Math.pow(2,(n-69)/12);
+function mStep(T,i,t,sd){const bar=Math.floor(i/16)%4,st=i%16,[co,q]=T.chords[bar],root=T.root+MUS.tr+co,ch=CHORD[q];
+  const L=T.lead[i%64];if(L!==null){let len=1;while(len<6&&T.lead[(i+len)%64]===null)len++;mNote(hz(T.root+MUS.tr+L),t,len*sd*.95,.045,"square");}
+  if(T.chug)mNote(hz(root-12),t,sd*.8,st%4===3?.03:.07,"triangle");
+  else if(T.pump){if(st%2===0)mNote(hz(root-12+(st%8===4?12:0)),t,sd*1.6,.08,"triangle");}
+  else if(st%4===0)mNote(hz(root-12),t,sd*3.5,.08,"triangle");
+  if(T.arp&&st%2===0)mNote(hz(root+ch[(st/2)%3]),t,sd*1.5,.02,"triangle");
+  if(T.pump&&st%4===2)for(const c of ch)mNote(hz(root+c),t,sd*.9,.012,"square");
+  if(T.kick.includes(st)){const o=AC.createOscillator(),gn=AC.createGain();o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(40,t+.12);o.connect(gn);gn.connect(MUS.gain);gn.gain.setValueAtTime(.16,t);gn.gain.exponentialRampToValueAtTime(.001,t+.14);o.start(t);o.stop(t+.15);}
+  if(T.snare.includes(st))mNoise(t,.12,.07,1200);
+  if(T.hat.includes(st))mNoise(t,.03,.025,6000);}
+function wantTrack(){if(!$("titre").hidden)return null;if(G&&!$("combat").hidden&&G.phase!=="over")return G.mon&&!G.mon.dead?"monstre":"combat";return "menu";}
+function musTick(){if(!AC||!MUS.on||(G&&paused)){if(MUS.gain&&AC)MUS.gain.gain.setTargetAtTime(0,AC.currentTime,.05);return;}
+  if(!MUS.gain){MUS.gain=AC.createGain();MUS.gain.gain.value=.5;MUS.gain.connect(AC.destination);}
+  MUS.gain.gain.setTargetAtTime(.5,AC.currentTime,.05);
+  const w=wantTrack(),tr=w==="combat"&&G?TRANSPOSE[G.theme]||0:0;
+  if(w!==MUS.cur||tr!==MUS.tr){MUS.cur=w;MUS.tr=tr;MUS.step=0;MUS.next=AC.currentTime+.08;}
+  if(!w)return;const T=TRACKS[w],sd=60/T.bpm/4;
+  if(MUS.next<AC.currentTime-.3)MUS.next=AC.currentTime+.02;
+  while(MUS.next<AC.currentTime+.15){mStep(T,MUS.step,MUS.next,sd);MUS.step=(MUS.step+1)%64;MUS.next+=sd;}}
+setInterval(musTick,30);
+function prefBtns(){for(const id of ["musBtn","musBtn2"]){const b=$(id);if(!b)continue;b.setAttribute("aria-pressed",MUS.on);if(id==="musBtn")b.textContent="Musique : "+(MUS.on?"oui":"non");}
+  $("vibBtn").setAttribute("aria-pressed",VIB);$("vibBtn").textContent="Vibrations : "+(VIB?"oui":"non");}
+const togMus=()=>{MUS.on=!MUS.on;try{localStorage.setItem("fdr-musique",MUS.on?"1":"0");}catch(e){}prefBtns();};
+$("musBtn").onclick=togMus;$("musBtn2").onclick=togMus;
+$("vibBtn").onclick=()=>{VIB=!VIB;try{localStorage.setItem("fdr-vib",VIB?"1":"0");}catch(e){}prefBtns();if(VIB)buzz(30);};
+prefBtns();
+
 // ---------- Jeu ----------
 const VW=384,VH=216;                       // repère de l'interface (dessinée à l'échelle 2)
 const WW=768,WH=432,CS=4,CW=WW/CS,CH=WH/CS; // monde : 768 x 432, terrain en cases de 4 px
@@ -439,7 +490,7 @@ addEventListener("keydown",e=>{if($("combat").hidden)return;if(["ArrowUp","Arrow
 addEventListener("keyup",e=>keys.delete(e.code));
 addEventListener("blur",()=>keys.clear());
 for(const b of document.querySelectorAll("#touch .tb")){const k=b.dataset.k;
-  b.addEventListener("pointerdown",e=>{e.preventDefault();touch[k]=true;b.classList.add("on");try{b.setPointerCapture(e.pointerId);}catch(x){}if(navigator.vibrate)try{navigator.vibrate(8);}catch(x){}});
+  b.addEventListener("pointerdown",e=>{e.preventDefault();touch[k]=true;b.classList.add("on");try{b.setPointerCapture(e.pointerId);}catch(x){}buzz(8);});
   for(const ev of ["pointerup","pointercancel","lostpointercapture"])b.addEventListener(ev,()=>{touch[k]=false;b.classList.remove("on");});
   b.addEventListener("contextmenu",e=>e.preventDefault());}
 // Joystick : le pouce se pose n'importe où dans la moitié gauche, la base vient sous le pouce.
@@ -649,6 +700,7 @@ function damage(T,dmg,dir,by,opt){opt=opt||{};if(T.remote||T.dead||G.phase!=="fi
   if(opt.web){T.web=Math.max(T.web,opt.web);T.charge=0;}
   if(T.inv>0)return false;
   if(by&&by!==T){T.lastBy=by;T.lastByT=G.t;const k=sk(by);if(k)G.dealt[k]=(G.dealt[k]||0)+Math.min(T.hp,dmg);}
+  if(T.isMe||(!G.online&&T.ctrl===0))buzz(T.hp-dmg<=0?220:45);
   T.hp=Math.max(0,T.hp-dmg);T.inv=40;T.stun=opt.web?0:14;T.vx=opt.web?0:dir*2.6;T.vy=opt.web?0:-2.2;T.onGround=false;T.charge=0;G.shake=Math.max(G.shake,6);sfx("hit");
   for(let i=0;i<10;i++)G.fx.push({x:T.x,y:T.y-12,vx:(Math.random()-.5)*4,vy:(Math.random()-.8)*3,life:20+Math.random()*10,c:i%2?"#ffffff":T.a.prim,s:2});
   if(T.hp<=0){T.dead=true;T.deadT=0;T.kb=by&&by.isMon?"mon":(by&&by.peer)||null;T.kk=sk(by);sfx("ko");koFx(T);
@@ -657,9 +709,9 @@ function damage(T,dmg,dir,by,opt){opt=opt||{};if(T.remote||T.dead||G.phase!=="fi
 // Toucher le fond (lave, eau, acide, abîme...) = élimination immédiate.
 function fallKill(F){if(G.phase!=="fight"){F.x=findGround(F.x);F.y=surfaceY(F.x,0);F.vx=F.vy=0;return;}
   const by=F.lastBy&&G.t-F.lastByT<300?F.lastBy:null,de=TH.liq.de,me=G.online&&F.isMe;
-  F.hp=0;F.dead=true;F.deadT=0;F.web=0;F.kb=by&&by.isMon?"mon":(by&&by.peer)||null;F.kk=sk(by);sfx("ko");splash(F.x);G.shake=Math.max(G.shake,8);
+  if(F.isMe||(!G.online&&F.ctrl===0))buzz(260);F.hp=0;F.dead=true;F.deadT=0;F.web=0;F.kb=by&&by.isMon?"mon":(by&&by.peer)||null;F.kk=sk(by);sfx("ko");splash(F.x);G.shake=Math.max(G.shake,8);
   addFeed(by?(me?`${killerName(by)} t'a envoyé ${de}`:`${killerName(by)} a envoyé ${F.a.nom} ${de}`):(me?`Tu es tombé ${de}`:`${F.a.nom} est tombé ${de}`));}
-function explode(p){sfx("boom");G.shake=Math.max(G.shake,8);const r=p.rad||14;boomFx(p.x,p.y,r);
+function explode(p){sfx("boom");G.shake=Math.max(G.shake,8);const r=p.rad||14;boomFx(p.x,p.y,r);{const me=G.online?G.me:G.f[0];if(me&&!me.dead&&Math.abs(me.x-p.x)<r+50&&Math.abs(me.y-p.y)<r+60)buzz(25);}
   if(p.owner&&p.owner.isEnv)doCarve(p.x,p.y,r*.75,false);else if(ownsLocally(p.owner))doCarve(p.x,p.y,r*.75,true);
   for(const T of G.f){if(T===p.owner||T.remote||T.dead)continue;const dx=T.x-p.x,dy=(T.y-11)-p.y;if(dx*dx+dy*dy<(r+8)*(r+8))damage(T,p.dmg,Math.sign(dx)||1,p.owner);}
   const M=G.mon;if(M&&!M.dead&&M.st!=="attente"&&p.owner!==M&&!p.owner.isEnv&&ownsLocally(p.owner))for(const c of monCircles(M)){const dx=c.x-p.x,dy=c.y-p.y;if(dx*dx+dy*dy<(r+c.r)*(r+c.r)){monHit(p.dmg,p.owner);break;}}}

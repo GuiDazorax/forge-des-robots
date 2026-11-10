@@ -118,6 +118,19 @@ public class BtBridge {
                 : ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED));
     }
 
+    /** Vibration courte (coups reçus, explosions). */
+    @JavascriptInterface
+    @SuppressWarnings("deprecation")
+    public void vibrate(int ms) {
+        try {
+            android.os.Vibrator v = (android.os.Vibrator) act.getSystemService(Context.VIBRATOR_SERVICE);
+            if (v == null || !v.hasVibrator()) return;
+            int d = Math.max(1, Math.min(400, ms));
+            if (Build.VERSION.SDK_INT >= 26) v.vibrate(android.os.VibrationEffect.createOneShot(d, android.os.VibrationEffect.DEFAULT_AMPLITUDE));
+            else v.vibrate(d);
+        } catch (Exception ignored) { }
+    }
+
     @JavascriptInterface
     public void ensureReady() {
         ui.post(() -> {
