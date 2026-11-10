@@ -743,8 +743,10 @@ function stepGame(){if(G.online&&!NET.r){backToLobby();return;}
   if(G.shake>0)G.shake--;
   if(G.online&&G.t%2===0)sendNet();
   if(G.phase==="intro"){if(G.mon&&G.pt<110&&G.pt%24===0)sfx("alarm");if(!G.mon&&G.pt===40)sfx("beep");if(G.pt>=G.introLen){G.phase="fight";G.pt=0;sfx("big");}}
-  else if(G.phase==="fight"){G.timer--;
+  else if(G.phase==="fight"){if(!G.mon)G.timer--;
     if(G.mon&&G.mon.dead){G.phase="ko";G.pt=0;G.coop=true;G.win=null;sfx("big");}
+    else if(G.mon){ // avec un monstre : la partie ne finit que s'il meurt ou si tous les robots tombent
+      if(G.pt>30&&alivePlayers().length===0){G.phase="ko";G.pt=0;G.win=null;G.timeout=false;sfx("ko");}}
     else{const alive=alivePlayers();
       if(G.pt>30&&(alive.length<=1||G.timer<=0)){let win=alive.length===1?alive[0]:null;
         if(alive.length>1){let best=-1;for(const a of alive){const F=G.online?(a===G.me.peer?G.me:G.remotes.get(a)):a;const r=F?F.hp/F.maxHp:0;if(r>best){best=r;win=a;}}}
@@ -861,7 +863,7 @@ function render(){updCam();const c=G.cam,z=c.z;
   if(M&&!M.dead&&M.st!=="attente"){const cc=monCircles(M)[0];if(cc)edgeArrow(cc.x,cc.y,MONS[M.k].col);}
   if(G.online)for(const F of G.f)if(F!==G.me&&!F.dead)edgeArrow(F.x,F.y-12,F.a.prim);
   if(G.online)onlineHud();else{hpBar(G.f[0],8,false);hpBar(G.f[1],VW-138,true);
-    const sec=Math.ceil(G.timer/60);txt(String(Math.max(0,sec)).padStart(2,"0"),VW/2,8,12,sec<=10?"#ff5c7a":"#ecebff");}
+    if(M)txt("ÉQUIPE",VW/2,10,8,"#3fe0c4");else{const sec=Math.ceil(G.timer/60);txt(String(Math.max(0,sec)).padStart(2,"0"),VW/2,8,12,sec<=10?"#ff5c7a":"#ecebff");}}
   G.feed.forEach((f,i)=>txt(f.t.toUpperCase(),6,(M?186:200)-(G.feed.length-1-i)*9,5,"#ecebff","left"));
   if(M&&M.st!=="attente"&&!(M.dead&&M.deadT>100)){const w=150,x=VW/2-w/2,y=200;txt(MONS[M.k].nom,VW/2,y-9,6,MONS[M.k].col);
     g.fillStyle="#0a0a16";g.fillRect(x-1,y-1,w+2,7);g.fillStyle="#2a1530";g.fillRect(x,y,w,5);g.fillStyle=MONS[M.k].col;g.fillRect(x,y,Math.ceil(w*M.hp/M.mx),5);}
@@ -869,15 +871,15 @@ function render(){updCam();const c=G.cam,z=c.z;
     if(M){const a=G.pt<200&&G.pt%20<10;if(a){g.fillStyle="#ff2d5555";g.fillRect(0,0,VW,VH);}
       g.fillStyle="#ff2d55";for(let x=-20+(G.pt%20);x<VW;x+=20){g.fillRect(x,0,10,6);g.fillRect(x,VH-6,10,6);}
       if(G.pt<120)txt("ALERTE MONSTRE",VW/2,70,14,G.pt%20<10?"#ff2d55":"#ffffff");
-      else if(G.pt<G.introLen-40){txt(MONS[M.k].nom,VW/2,60,20,MONS[M.k].col);txt(MONS[M.k].sous,VW/2,88,7,"#ecebff");txt("S'IL TOMBE, TOUT LE MONDE GAGNE",VW/2,104,5,"#ffb52e");}
+      else if(G.pt<G.introLen-40){txt(MONS[M.k].nom,VW/2,60,20,MONS[M.k].col);txt(MONS[M.k].sous,VW/2,88,7,"#ecebff");txt("TUEZ-LE ENSEMBLE : S'IL TOMBE, TOUT LE MONDE GAGNE",VW/2,104,5,"#ffb52e");}
       else txt("PRÊTS ?",VW/2,90,12,"#ffb52e");}
     else{txt(G.online?`${G.players.length} ROBOTS`:`MANCHE ${G.round}`,VW/2,80,14,"#ecebff");if(G.pt>40)txt("PRÊTS ?",VW/2,104,10,"#ffb52e");}}
   if(G.phase==="fight"&&G.pt<40)txt("COMBAT !",VW/2,90,16,"#ffb52e");
   if(G.phase==="ko"&&G.pt>20){
     if(G.coop)txt("VICTOIRE COLLECTIVE !",VW/2,84,13,"#3fe0c4");
     else if(G.online){const w=G.win;txt(w===G.me.peer?"VICTOIRE !":w?`${peerName(w).toUpperCase()} GAGNE`:(M&&!M.dead?`${MONS[M.k].nom} GAGNE`:"ÉGALITÉ"),VW/2,88,w===G.me.peer?16:10,"#ffb52e");}
-    else{txt(G.timeout?"TEMPS ÉCOULÉ":"K.O.",VW/2,84,G.timeout?12:22,"#ff5c7a");
-      if(G.pt>90)txt(G.win?`${G.win.a.nom.toUpperCase()} REMPORTE LA MANCHE`:(M&&!M.dead?`${MONS[M.k].nom} REMPORTE LA MANCHE`:"ÉGALITÉ"),VW/2,116,7,"#ecebff");}}}
+    else{txt(G.timeout?"TEMPS ÉCOULÉ":M&&!M.dead?"DÉFAITE":"K.O.",VW/2,84,G.timeout?12:22,"#ff5c7a");
+      if(G.pt>90)txt(G.win?`${G.win.a.nom.toUpperCase()} REMPORTE LA MANCHE`:(M&&!M.dead?`${MONS[M.k].nom} VOUS A TOUS BATTUS`:"ÉGALITÉ"),VW/2,116,7,"#ecebff");}}}
 let last=0,acc=0;
 function loop(now){raf=requestAnimationFrame(loop);if(paused||!G)return;acc+=Math.min(100,now-last);last=now;
   while(acc>=1000/60&&G){if(G.phase!=="over")stepGame();acc-=1000/60;}if(G)render();}
@@ -996,8 +998,8 @@ function onlineHud(){
     if(F){const r=F.hp/F.maxHp;g.fillStyle=F.dead?"#55506a":r>.5?"#3fe0c4":r>.25?"#ffb52e":"#ff5c7a";g.fillRect(x,y+8,Math.ceil(w*r),4);
       if(F.buffS>0){g.fillStyle="#ffd04a";g.fillRect(x+w-14,y,5,5);}if(F.buffD>0){g.fillStyle="#ff5c7a";g.fillRect(x+w-7,y,5,5);}}
     if(F&&F.dead)txt("K.O.",x+w,y,5,"#ff5c7a","right");});
-  const sec=Math.max(0,Math.ceil(G.timer/60));txt(String(sec),VW-6,G.mon?186:203,7,sec<=10?"#ff5c7a":"#ecebff","right");
-  if(G.phase==="fight"&&G.me.dead)txt("ÉLIMINÉ · TU REGARDES LA FIN",VW/2,60,6,"#ff5c7a");}
+  if(!G.mon){const sec=Math.max(0,Math.ceil(G.timer/60));txt(String(sec),VW-6,203,7,sec<=10?"#ff5c7a":"#ecebff","right");}
+  if(G.phase==="fight"&&G.me.dead)txt(G.mon?"ÉLIMINÉ · TES AMIS CONTINUENT LE COMBAT":"ÉLIMINÉ · TU REGARDES LA FIN",VW/2,60,6,"#ff5c7a");}
 const CODECH="abcdefghjkmnpqrstuvwxyz23456789";
 $("createBtn").onclick=()=>{let c="";for(let i=0;i<5;i++)c+=CODECH[Math.floor(Math.random()*CODECH.length)];$("codeIn").value=c.toUpperCase();joinGame(c);};
 $("joinBtn").onclick=()=>joinGame($("codeIn").value);
