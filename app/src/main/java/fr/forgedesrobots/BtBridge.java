@@ -12,6 +12,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Handler;
@@ -108,6 +109,14 @@ public class BtBridge {
 
     @JavascriptInterface
     public boolean available() { return adapter != null; }
+
+    /** Combat : écran en paysage ; menus : orientation libre. */
+    @JavascriptInterface
+    public void landscape(boolean on) {
+        ui.post(() -> act.setRequestedOrientation(on
+                ? ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                : ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED));
+    }
 
     @JavascriptInterface
     public void ensureReady() {
