@@ -1,4 +1,8 @@
+<p align="center"><img src="docs/logo-horizontal.png" alt="Forge des Robots" width="480"></p>
+
 # Forge des Robots
+
+*Forge ton robot. Fais trembler l'arène.*
 
 Jeu de combat de robots en pixel art, pour Android. Crée ton robot (couleurs, casque, canon, stats) et affronte l'ordinateur, un ami sur le même téléphone, ou jusqu'à 7 amis en Bluetooth.
 
