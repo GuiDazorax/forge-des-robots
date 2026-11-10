@@ -10,7 +10,8 @@ Jeu de combat de robots en pixel art, pour Android. Crée ton robot (couleurs, c
 
 - 6 arènes destructibles et 2 fois plus grandes, avec des étages de plateformes, des tours et des falaises (ville, forêt, montagne, volcan, mer, arctique) avec leurs effets : lave qui monte, marée, vent, glace. Le fond de l'arène est mortel.
 - Règles : chacun pour soi, équipes rouge contre bleue, vagues de monstres en coop.
-- Mode histoire (chapitre 1, 6 missions), en solo ou en coop Bluetooth. Un secret se cache dans la première mission.
+- Menu à 3 portes : Histoire, Arène, Forge.
+- Mode histoire complet : 5 chapitres, 30 missions, en solo ou en coop Bluetooth. Chaque chapitre débloque un objet à la forge, et un secret se cache dans la première mission.
 - Option « monstre joueur » : à 3 vrais joueurs ou plus, un joueur tiré au sort contrôle le monstre.
 - Jetpack à acheter à l'atelier (réservoir qui se recharge au sol).
 - Visée libre : glisse le pouce sur TIR (téléphone) ou vise à la souris.

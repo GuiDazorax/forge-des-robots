@@ -71,6 +71,21 @@ input[type=color]{width:46px;height:34px;border:2px solid var(--line);background
 .btn.ghost:active{box-shadow:inset 4px 4px 0 #59606A,inset -4px -4px 0 #C6CDD4}
 .btn.danger{background:var(--acier);color:var(--danger);box-shadow:inset -4px -4px 0 #59606A,inset 4px 4px 0 #C6CDD4}
 .btn.big{font-size:28px;padding:12px 28px}
+/* Menu principal : 3 grandes portes */
+.menu{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.mbtn{display:flex;flex-direction:column;gap:8px;align-items:flex-start;text-align:left;padding:22px 20px;min-height:150px;background:var(--panel);border:3px solid var(--line);color:var(--fg);cursor:pointer;font:inherit}
+.mbtn b{font:400 44px var(--display);letter-spacing:.04em;color:var(--accent);line-height:1}
+.mbtn span{color:var(--muted,#c9b89a);font-size:15px}
+.mbtn:hover,.mbtn:focus-visible{border-color:var(--fusion);outline:none;background:#2a1d16}
+.mbtn.h b{color:#a6e05a}.mbtn.c b{color:#5cb8ff}
+@media (max-width:640px){.menu{grid-template-columns:minmax(0,1fr)}.mbtn{min-height:0;padding:16px}.mbtn b{font-size:36px}}
+#navRow{justify-content:space-between;order:-2}#menu{order:-3}
+body:not([data-scr="menu"]) #menu{display:none}
+body[data-scr="menu"] #navRow,body[data-scr="menu"] #forgeGrid,body[data-scr="menu"] #launch{display:none}
+body[data-scr="forge"] #launch{display:none}
+body[data-scr="histoire"] #forgeGrid,body[data-scr="coop"] #forgeGrid{display:none}
+body:not([data-scr="histoire"]) #histChoice{display:none}
+body[data-scr="histoire"] #modeWrap,body[data-scr="histoire"] #decorWrap,body[data-scr="histoire"] #regleWrap,body[data-scr="histoire"] #p2Wrap{display:none}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent2);outline-offset:2px}
 .setup{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:end}
 @media (max-width:760px){.setup{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -171,7 +186,13 @@ kbd{font-family:var(--body);font-weight:700;font-size:12px;background:var(--bg);
   </header>
 
   <section id="atelier" class="wrap" style="gap:20px">
-    <div class="grid">
+    <div class="menu" id="menu">
+      <button class="mbtn h" data-go="histoire"><b>HISTOIRE</b><span>Les aliens ont fait de la Terre leurs toilettes. Sauve la planète, seul ou en coop.</span></button>
+      <button class="mbtn c" data-go="coop"><b>ARÈNE</b><span>Tous les combats : contre l'ordinateur, à plusieurs en Bluetooth ou en ligne, en équipes, en vagues de monstres.</span></button>
+      <button class="mbtn" data-go="forge"><b>FORGE</b><span>Construis ton robot : couleurs, casque, canon, stats et objets à débloquer.</span></button>
+    </div>
+    <div class="row" id="navRow"><button class="btn ghost" id="backMenu">← Menu</button><span class="label" id="navTitle"></span></div>
+    <div class="grid" id="forgeGrid">
       <div class="panel">
         <div class="stage">
           <span class="stage-cap" id="poseCap">AU REPOS</span>
@@ -228,10 +249,11 @@ kbd{font-family:var(--body);font-weight:700;font-size:12px;background:var(--bg);
       </div>
     </div>
 
-    <div class="panel">
-      <h2>Lancer un combat</h2>
+    <div class="panel" id="launch">
+      <h2 id="launchTitle">Lancer un combat</h2>
+      <div class="row" id="histChoice"><button class="btn" id="hSolo" aria-pressed="true">Solo</button><button class="btn ghost" id="hCoop" aria-pressed="false">Coop (Bluetooth ou en ligne)</button></div>
       <div class="setup">
-        <div class="field">
+        <div class="field" id="modeWrap">
           <label class="label" for="mode">Mode</label>
           <select id="mode"><option value="ia">Contre l'ordinateur</option><option value="duo">2 joueurs (même clavier)</option><option value="online">En ligne (2 à 8 joueurs)</option><option value="histoire">Histoire (solo)</option></select>
         </div>
@@ -251,20 +273,13 @@ kbd{font-family:var(--body);font-weight:700;font-size:12px;background:var(--bg);
           <label class="label" for="regle">Règle</label>
           <select id="regle"><option value="ffa">Chacun pour soi</option><option value="equipes">Équipes rouge contre bleue</option><option value="vagues">Vagues de monstres (coop)</option><option value="histoire">Histoire en coop</option></select>
         </div>
-        <div class="field">
+        <div class="field" id="decorWrap">
           <label class="label" for="decor">Décor</label>
           <select id="decor"><option value="hasard">Au hasard</option><option value="ville">Ville</option><option value="foret">Forêt</option><option value="montagne">Montagne</option><option value="volcan">Volcan</option><option value="mer">Mer</option><option value="arctique">Arctique</option></select>
         </div>
       </div>
-      <div class="keys">
-        <div class="kb"><b style="color:var(--fg)">Joueur 1</b><br><kbd>Q</kbd> <kbd>D</kbd> bouger · <kbd>Z</kbd> sauter · <kbd>F</kbd> tirer (maintenir pour charger) · <kbd>G</kbd> esquive · <kbd>E</kbd> objet spécial. Vise avec la souris (clic gauche pour tirer). En mode solo, les flèches + <kbd>K</kbd> <kbd>L</kbd> marchent aussi. Clavier QWERTY : mêmes touches physiques (WASD).</div>
-        <div class="kb"><b style="color:var(--fg)">Joueur 2</b><br><kbd>←</kbd> <kbd>→</kbd> bouger · <kbd>↑</kbd> sauter · <kbd>L</kbd> tirer · <kbd>K</kbd> esquive · <kbd>O</kbd> objet spécial. Combat en 2 manches gagnantes.</div>
-        <div class="tc"><b style="color:var(--fg)">Sur téléphone</b><br>Pouce gauche n'importe où à gauche de l'écran : glisse pour bouger. À droite : <b>TIR</b> (touche brève : tir droit devant ; maintiens pour charger ; maintiens et glisse le pouce pour viser dans toutes les directions, le tir part quand tu lâches), puis autour : <b>SAUT</b>, <b>ESQ.</b> pour esquiver et <b>SPÉ</b> quand tu portes des mines ou un grappin.</div>
-        <div><b style="color:var(--fg)">Pièces</b><br>Chaque combat rapporte des pièces selon ta place parmi les vrais joueurs : à 4 joueurs ou plus 12 / 8 / 4 / 2, à 3 joueurs 6 / 4 / 2, à 2 joueurs 2 / 1, seul contre l'IA 1 pièce si tu gagnes. Dépense-les dans l'atelier pour débloquer casques, finitions et canons.</div>
-        <div><b style="color:var(--fg)">Arène</b><br>Le décor se détruit sous les tirs. Des bonus tombent du ciel : <span style="color:#3fe0c4">soin</span>, <span style="color:#ffd04a">vitesse</span>, <span style="color:#ff5c7a">dégâts</span>, <span style="color:#7fd0ff">bouclier</span>, <span style="color:#ff9a3a">jetpack</span> (maintiens saut en l'air), <span style="color:#c34cff">mines</span> et <span style="color:#a6e05a">grappin</span>. Attention au fond de l'arène : lave, eau, acide ou abîme, y tomber élimine aussitôt. Deux parties sur cinq, un monstre géant débarque : s'il tombe, tout le monde gagne. En ligne, c'est le décor choisi par l'hôte qui compte.</div>
-      </div>
       <div class="online" id="storyBox" hidden>
-        <p class="note">Les aliens ont fait de la Terre leurs toilettes. Envoie ton robot dehors ramener composants et conserves au bunker. En coop : choisis « En ligne » ou « Bluetooth », puis la règle « Histoire en coop ».</p>
+        <p class="note">Les aliens ont fait de la Terre leurs toilettes. Envoie ton robot dehors ramener composants et conserves au bunker. 5 chapitres, 30 missions. Chaque chapitre terminé débloque un objet à la forge.</p>
         <div id="storyList" style="display:flex;flex-direction:column;gap:8px"></div>
         <div class="row"><button class="btn ghost" id="prologueBtn">Revoir le prologue</button></div>
       </div>
@@ -292,6 +307,13 @@ kbd{font-family:var(--body);font-weight:700;font-size:12px;background:var(--bg);
         </div>
       </div>
       <div class="row" id="fightRow"><button class="btn big" id="fightBtn">Combattre !</button><span class="note">Tes robots sont gardés dans ce navigateur.</span></div>
+      <div class="keys">
+        <div class="kb"><b style="color:var(--fg)">Joueur 1</b><br><kbd>Q</kbd> <kbd>D</kbd> bouger · <kbd>Z</kbd> sauter · <kbd>F</kbd> tirer (maintenir pour charger) · <kbd>G</kbd> esquive · <kbd>E</kbd> objet spécial. Vise avec la souris (clic gauche pour tirer). En mode solo, les flèches + <kbd>K</kbd> <kbd>L</kbd> marchent aussi. Clavier QWERTY : mêmes touches physiques (WASD).</div>
+        <div class="kb"><b style="color:var(--fg)">Joueur 2</b><br><kbd>←</kbd> <kbd>→</kbd> bouger · <kbd>↑</kbd> sauter · <kbd>L</kbd> tirer · <kbd>K</kbd> esquive · <kbd>O</kbd> objet spécial. Combat en 2 manches gagnantes.</div>
+        <div class="tc"><b style="color:var(--fg)">Sur téléphone</b><br>Pouce gauche n'importe où à gauche de l'écran : glisse pour bouger. À droite : <b>TIR</b> (touche brève : tir droit devant ; maintiens pour charger ; maintiens et glisse le pouce pour viser dans toutes les directions, le tir part quand tu lâches), puis autour : <b>SAUT</b>, <b>ESQ.</b> pour esquiver et <b>SPÉ</b> quand tu portes des mines ou un grappin.</div>
+        <div><b style="color:var(--fg)">Pièces</b><br>Chaque combat rapporte des pièces selon ta place parmi les vrais joueurs : à 4 joueurs ou plus 12 / 8 / 4 / 2, à 3 joueurs 6 / 4 / 2, à 2 joueurs 2 / 1, seul contre l'IA 1 pièce si tu gagnes. Dépense-les dans l'atelier pour débloquer casques, finitions et canons.</div>
+        <div><b style="color:var(--fg)">Arène</b><br>Le décor se détruit sous les tirs. Des bonus tombent du ciel : <span style="color:#3fe0c4">soin</span>, <span style="color:#ffd04a">vitesse</span>, <span style="color:#ff5c7a">dégâts</span>, <span style="color:#7fd0ff">bouclier</span>, <span style="color:#ff9a3a">jetpack</span> (maintiens saut en l'air), <span style="color:#c34cff">mines</span> et <span style="color:#a6e05a">grappin</span>. Attention au fond de l'arène : lave, eau, acide ou abîme, y tomber élimine aussitôt. Deux parties sur cinq, un monstre géant débarque : s'il tombe, tout le monde gagne. En ligne, c'est le décor choisi par l'hôte qui compte.</div>
+      </div>
     </div>
   </section>
 
@@ -325,21 +347,25 @@ const TOUCHDEV=("ontouchstart" in window)||navigator.maxTouchPoints>0||matchMedi
 (()=>{
 "use strict";
 // ---------- Données ----------
-const HELMETS={crete:"Crête",cornes:"Cornes",antenne:"Antenne",visiere:"Visière",dome:"Dôme",ailes:"Ailerons",couronne:"Couronne",flamme:"Flamme"};
-const FINS={"":"Standard",neon:"Néon",dore:"Doré",magma:"Magma"};
-const PACKS={"":"Rien",jetpack:"Jetpack"};
+const HELMETS={crete:"Crête",cornes:"Cornes",antenne:"Antenne",visiere:"Visière",dome:"Dôme",ailes:"Ailerons",couronne:"Couronne",flamme:"Flamme",baron:"Haut-de-forme du Baron",glorbz:"Antennes Glorbz"};
+const FINS={"":"Standard",neon:"Néon",dore:"Doré",magma:"Magma",memo:"Papier froissé",ecailles:"Écailles de Vermagma"};
+const PACKS={"":"Rien",jetpack:"Jetpack",grillepain:"Grille-pain de Gérard"};
 // Boutique : objets à débloquer avec les pièces gagnées en combat
 const SHOP={"h:ailes":5,"h:couronne":8,"h:flamme":10,"f:neon":8,"f:dore":12,"f:magma":18,"w:rafale":15,"w:disque":20,"p:jetpack":25};
 let COINS=0,UNL=new Set();try{COINS=Math.max(0,parseInt(localStorage.getItem("fdr-pieces")||"0",10)||0);UNL=new Set(JSON.parse(localStorage.getItem("fdr-debloque")||"[]"));if(!localStorage.getItem("fdr-eco2")){COINS=Math.round(COINS/10);localStorage.setItem("fdr-eco2","1");localStorage.setItem("fdr-pieces",String(COINS));}}catch(e){}
 function saveShop(){try{localStorage.setItem("fdr-pieces",String(COINS));localStorage.setItem("fdr-debloque",JSON.stringify([...UNL]));}catch(e){}}
-const owned=k=>!SHOP[k]||UNL.has(k);let BUY=null;
+// Objets gagnés dans le mode histoire (pas à vendre) : [mission qui débloque, texte]
+const STORYUNL={"h:baron":["1-6","termine le chapitre 1"],"f:memo":["secret","trouve le secret du chapitre 1"],"h:glorbz":["2-6","termine le chapitre 2"],"p:grillepain":["3-6","termine le chapitre 3"],"f:ecailles":["4-6","termine le chapitre 4"],"w:haricot":["5-6","termine le chapitre 5"]};
+const storyHas=k=>{try{const u=STORYUNL[k];return u[0]==="secret"?!!SAVE.secret:SAVE.done.includes(u[0]);}catch(e){return false;}};
+const owned=k=>STORYUNL[k]?storyHas(k):!SHOP[k]||UNL.has(k);let BUY=null;
 const WEAPONS={
   pulsar:{nom:"Canon Pulsar",desc:"Tirs rapides et précis.",rate:12,dist:110},
   eventail:{nom:"Éventail",desc:"3 tirs en cône, courte portée.",rate:24,dist:70},
   lance:{nom:"Rayon Lance",desc:"Laser perçant, recharge lente.",rate:34,dist:150},
   mortier:{nom:"Mortier",desc:"Bombe en cloche, explose en zone.",rate:40,dist:100},
   rafale:{nom:"Mitrailleuse",desc:"Pluie de petits tirs très rapides.",rate:5,dist:100},
-  disque:{nom:"Disque boomerang",desc:"Part, revient et traverse tout.",rate:30,dist:120}
+  disque:{nom:"Disque boomerang",desc:"Part, revient et traverse tout.",rate:30,dist:120},
+  haricot:{nom:"Canon à haricots",desc:"Mitraille de haricots en cloche. L'arme qui a sauvé la Terre.",rate:16,dist:90}
 };
 const STATS={vie:"Blindage",puissance:"Puissance",vitesse:"Vitesse",saut:"Saut"};
 const TOTAL=10, MAXS=5;
@@ -369,7 +395,7 @@ function shade(hex,k){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255,b
 const OUT="#0a0a16";
 function drawBot(g,ox,oy,face,pose,a,t,opt={}){
   if(a.sk){drawSkin(g,ox,oy,face,pose,a,t,opt);return;}
-  const P=a.fin==="dore"?"#e8b730":a.prim,S=a.sec,V=a.visor,L=shade(P,.45),D=shade(P,-.35);
+  const P=a.fin==="dore"?"#e8b730":a.fin==="memo"?"#efe2c0":a.prim,S=a.sec,V=a.visor,L=shade(P,.45),D=shade(P,-.35);
   const parts=[];const p=(x,y,w,h,c)=>parts.push([x,y,w,h,c]);
   const bob=(pose==="idle"&&Math.floor(t/30)%2)?1:0;
   // jambes
@@ -380,6 +406,7 @@ function drawBot(g,ox,oy,face,pose,a,t,opt={}){
   else {leg(-4,0,0);leg(1,0,0);}
   const u=bob;
   if(a.pack==="jetpack"){p(-8,-18+u,4,9,"#5a5f68");p(-8,-18+u,4,1,"#8B939C");p(-7,-9+u,2,2,"#ff7a1a");}
+  if(a.pack==="grillepain"){p(-10,-17+u,6,8,"#c9cfd6");p(-9,-18+u,1,2,"#d9a066");p(-7,-18+u,1,2,"#d9a066");p(-11,-13+u,1,3,"#3a3f48");p(-9,-11+u,3,1,"#ff6a1a");}
   // bras arrière
   p(-6,-13+u,2,4,S);
   // torse
@@ -391,6 +418,7 @@ function drawBot(g,ox,oy,face,pose,a,t,opt={}){
   else if(a.weapon==="lance"){p(4+k,-12+u,8,3,S);p(6+k,-13+u,3,1,D);p(12+k,-12+u,1,3,V);}
   else if(a.weapon==="rafale"){p(4+k,-12+u,8,3,S);p(4+k,-9+u,3,2,D);p(12+k,-12+u,1,1,V);p(12+k,-10+u,1,1,V);}
   else if(a.weapon==="disque"){p(4+k,-12+u,5,4,S);p(9+k,-14+u,3,7,V);p(10+k,-11+u,1,1,"#ffffff");}
+  else if(a.weapon==="haricot"){p(4+k,-13+u,6,6,"#8a5a2a");p(5+k,-12+u,4,2,"#ff9a3a");p(10+k,-12+u,1,3,V);p(5+k,-9+u,1,1,"#f3e3c3");}
   else {p(4+k,-13+u,6,5,S);p(5+k,-14+u,4,1,D);p(10+k,-12+u,1,3,OUT);}
   // tête
   p(-4,-22+u,9,8,P);p(-3,-21+u,3,2,L);
@@ -403,10 +431,14 @@ function drawBot(g,ox,oy,face,pose,a,t,opt={}){
   else if(h==="visiere"){p(-4,-20+u,10,2,V);p(-5,-21+u,1,5,S);p(5,-19+u,1,1,"#ffffff");}
   else if(h==="ailes"){p(-6,-22+u,2,5,S);p(-7,-25+u,1,5,S);p(5,-22+u,2,5,S);p(7,-25+u,1,5,S);}
   else if(h==="couronne"){p(-4,-24+u,9,2,"#ffd04a");p(-4,-26+u,1,2,"#ffd04a");p(0,-27+u,1,3,"#ffd04a");p(4,-26+u,1,2,"#ffd04a");p(0,-24+u,1,1,"#ff5c7a");}
+  else if(h==="baron"){p(-5,-24+u,11,1,"#1a1a1a");p(-3,-29+u,7,5,"#2a2a2a");p(-3,-25+u,7,1,"#e8a0b0");p(3,-20+u,2,2,"#ffd04a");p(4,-18+u,1,3,"#ffd04a");}
+  else if(h==="glorbz"){p(-3,-27+u,1,4,"#7bdc4a");p(-4,-29+u,3,2,"#ff4ad8");p(3,-27+u,1,4,"#7bdc4a");p(2,-29+u,3,2,"#ff4ad8");p(-3,-24+u,7,2,"#7bdc4a");}
   else if(h==="flamme"){p(-2,-25+u,5,2,"#ff6a1a");p(-1,-27+u,3,2,"#ffb52e");p(0,-29+u-(Math.floor(t/6)%2),1,2,"#fff3b0");}
   else {p(-3,-24+u,7,2,P);p(-2,-25+u,5,1,L);}
   if(a.toast){p(-3,-28+u,3,4,"#d9a066");p(1,-28+u,3,4,"#d9a066");p(-3,-28+u,3,1,"#8a5a2a");p(1,-28+u,3,1,"#8a5a2a");}
   if(a.fin==="magma"){const c=Math.floor(t/10)%2?"#ffb52e":"#ff6a1a";p(-1,-12+u,1,3,c);p(0,-10+u,2,1,c);p(-3,-21+u,1,2,c);p(1,-5,1,2,c);}
+  if(a.fin==="memo"){p(-3,-12+u,6,1,"#3a2a6a");p(-2,-10+u,4,1,"#3a2a6a");p(-2,-21+u,2,1,"#3a2a6a");}
+  if(a.fin==="ecailles"){const c2=shade(P,-.35),c3=Math.floor(t/12)%2?"#ff7a1a":"#ffb52e";for(const [ex,ey] of [[-3,-13],[0,-12],[3,-13],[-2,-10],[1,-9],[-2,-21],[1,-22]])p(ex,ey+u,1,1,c2);p(2,-10+u,1,1,c3);p(-3,-22+u,1,1,c3);}
   if(a.fin==="dore"){const gx=Math.floor(t/3)%36-14;if(gx>=-4&&gx<=4){p(gx,-14+u,1,6,"#fffbe0");}}
   g.save();
   const draw=(x,y,w,h,c,pad)=>{const X=face>0?x:-x-w;g.fillStyle=c;g.fillRect(ox+X-pad,oy+y-pad,w+pad*2,h+pad*2);};
@@ -427,6 +459,8 @@ function renderForm(){
   $("name").value=cur.nom;$("cPrim").value=cur.prim;$("cSec").value=cur.sec;$("cVis").value=cur.visor;
   $("coins").textContent=`${COINS} pièce${COINS>1?"s":""}`;
   const shopBtn=(key,cls,label,html,sel,apply)=>{const b=document.createElement("button");b.className=cls;const price=SHOP[key];
+    if(STORYUNL[key]&&!owned(key)){b.classList.add("lock");const t=`📖 ${label}`;if(html)b.innerHTML=`<b>${t}</b><span>Histoire : ${STORYUNL[key][1]}.</span>`;else b.textContent=t;b.setAttribute("aria-pressed","false");
+      b.onclick=()=>{$("shopNote").textContent=`« ${label} » se gagne dans le mode histoire : ${STORYUNL[key][1]}.`;};return b;}
     if(owned(key)){if(html)b.innerHTML=html;else b.textContent=label;b.setAttribute("aria-pressed",sel);b.onclick=apply;}
     else{b.classList.add(BUY===key?"buy":"lock");const t=BUY===key?`Acheter ? ${price} pièces`:`🔒 ${label} · ${price}`;if(html)b.innerHTML=`<b>${t}</b><span>${(html.match(/<span>(.*)<\/span>/)||["",""])[1]}</span>`;else b.textContent=t;b.setAttribute("aria-pressed","false");
       b.onclick=()=>{if(COINS<price){BUY=null;$("shopNote").textContent=`Il te manque ${price-COINS} pièce${price-COINS>1?"s":""} pour « ${label} ». Gagne-les en combat !`;renderForm();return;}
@@ -831,6 +865,7 @@ function fire(F,big,at){const w=F.a.weapon,f=at?at.f:F.face,aa=at?(typeof at.a==
   else if(w==="lance"){big?add({kind:"laser",vx:f*7,w:32,h:6,dmg:7*pw,pierce:true,big:true,life:70,drill:10,cr:7}):add({kind:"laser",vx:f*7,w:16,h:2,dmg:3*pw,pierce:true,life:60,drill:3,cr:4});}
   else if(w==="rafale"){if(big)for(let i=0;i<6;i++)add({vx:f*(4.6+i*.35),vy:(i-2.5)*.18,w:3,h:2,dmg:1.4*pw,life:55,cr:3});else add({vx:f*5.6,vy:((G.t*7)%5-2)*.06,w:3,h:2,dmg:.9*pw,life:45,cr:2});}
   else if(w==="disque")add({kind:"disc",vx:f*(big?6.4:5.4),f,w:big?11:7,h:big?11:7,dmg:(big?5:2.4)*pw,pierce:true,big,life:big?120:95,drill:big?16:8,cr:big?6:3});
+  else if(w==="haricot"){const n=big?7:3;for(let i=0;i<n;i++)add({kind:"bean",vx:f*(2.6+(i%3)*.6),vy:-1.4-(i%4)*.55-(big?.6:0),grav:.13,w:4,h:3,dmg:(big?1.7:1.3)*pw,life:130,cr:4,col:"#8a5a2a"});}
   else add({kind:"bomb",vx:f*(big?2.8:2.4),vy:big?-4.4:-3.6,w:5,h:5,dmg:(big?7:4)*pw,grav:.18,rad:big?32:20,big,life:200});
   F.shootAnim=10;sfx(big?"big":"shot");
   if(G.online&&!F.remote&&!at)G.myShots.push({i:++G.shotN,x:r1(F.x),y:r1(F.y),f,a:aa===null?undefined:Math.round(aa*100)/100,b:big?1:0,d:F.buffD>0?1:0,t:G.t,o:F.isBot?F.peer:undefined});}
@@ -1395,7 +1430,7 @@ function storySpawn(){const S=G.st,lv=S.lv;if(G.phase!=="fight"||!lv.foes.length
   if(live>=cap){S.spT=60;return;}
   const [k,c,d]=lv.foes[S.sq++];const n=Math.max(1,Math.round(c*(1+(np-1)*.5)));for(let i=0;i<n;i++)spawnFoe(k);S.spT=(d||4)*60;}
 function storyFlow(){const S=G.st,lv=S.lv;S.t++;S.got=S.ids.filter(id=>G.taken.has(id)).length;
-  if(G.taken.has("secret")&&!S.secretT){S.secretT=G.t;sfx("power");if(!SAVE.secret){SAVE.secret=true;saveStory();}}
+  if(G.taken.has("secret")&&!S.secretT){S.secretT=G.t;sfx("power");if(!SAVE.secret){SAVE.secret=true;saveStory();addFeed("Débloqué à la forge : finition Papier froissé !");}}
   if(S.dlg.length&&G.t>=S.dlgT){S.cur=S.dlg.shift();S.dlgT=G.t+300;}else if(!S.dlg.length&&G.t>=S.dlgT)S.cur=null;
   for(const F of G.f)if(F.foe){const d=FOES[F.foe];if(!F.dead&&(!F.say||G.t>F.say.t+200)&&Math.random()<1/420)F.say={txt:d.barks[Math.floor(Math.random()*d.barks.length)],t:G.t+150};
     if(F.dead&&!F.saidDie){F.saidDie=true;F.say={txt:d.die[Math.floor(Math.random()*d.die.length)],t:G.t+150};}}
@@ -1408,7 +1443,8 @@ function storyFlow(){const S=G.st,lv=S.lv;S.t++;S.got=S.ids.filter(id=>G.taken.h
   if(G.phase!=="fight")return;
   if(S.win){G.phase="ko";G.pt=0;G.storyWon=true;sfx("big");for(const F of G.f)if(F.foe&&!F.dead&&!F.remote){F.hp=0;F.dead=true;F.deadT=0;koFx(F);}}
   else if(G.pt>30&&alivePlayers().length===0){G.phase="ko";G.pt=0;G.storyWon=false;sfx("ko");}}
-function storyDone(){const lv=G.st.lv;if(G.storyWon&&!SAVE.done.includes(lv.id)){SAVE.done.push(lv.id);saveStory();}}
+function storyDone(){const lv=G.st.lv;G.unlockMsg="";if(G.storyWon&&!SAVE.done.includes(lv.id)){SAVE.done.push(lv.id);saveStory();
+    for(const k in STORYUNL)if(STORYUNL[k][0]===lv.id){const [t,id]=k.split(":");const nm=(t==="h"?HELMETS:t==="f"?FINS:t==="p"?PACKS:WEAPONS)[id];G.unlockMsg=` Débloqué à la forge : ${nm.nom||nm} !`;}}}
 function storyHud(){const S=G.st;if(!S)return;const lv=S.lv,ty=lv.goal.type;
   const obj=ty==="collecte"?`${lv.goal.k==="bouffe"?"CONSERVES":"COMPOSANTS"} ${S.got}/${lv.goal.n}`:ty==="combat"?`ENNEMIS RESTANTS : ${G.f.filter(F=>F.foe&&!F.dead).length+(lv.foes.length-S.sq>0?"+":"")}`:ty==="survie"?`TENIR : ${Math.max(0,Math.ceil(lv.goal.n-S.t/60))} S`:"VAINCS LE BOSS";
   if(G.phase==="fight")txt(obj,VW/2,G.online?40:26,7,"#ffb52e");
@@ -1431,7 +1467,7 @@ function startStory(id){const lv=findLv(id);if(!lv||!lvOpen(id))return;
 function endStoryLocal(){storyDone();const lv=G.st.lv,won=G.storyWon;G.phase="over";
   $("ovTitle").textContent=won?"MISSION RÉUSSIE !":"MISSION RATÉE";
   $("ovText").textContent=won?(lv.goal.type==="boss"?"Le chemin est libre. Josiane est fière de toi (elle ne le dira jamais).":"Josiane : « Pas mal. Rentre, il y a des haricots. »"):"Josiane : « On récupère ce qui reste de toi et on recommence. »";
-  showScore();$("ovText").textContent+=payout(won);G.nextLv=won?nextLvId(lv.id):lv.id;
+  showScore();$("ovText").textContent+=payout(won)+(G.unlockMsg||"");G.nextLv=won?nextLvId(lv.id):lv.id;
   const lastC=STORY.find(c=>c.ch===lv.ch).lv.slice(-1)[0].id===lv.id;$("ovMain").textContent=won?(lastC?"Fin du chapitre":"Niveau suivant"):"Réessayer";$("ovAlt").textContent="Carte";$("ov").hidden=false;}
 function renderStory(){const B=$("storyList");if(!B)return;B.innerHTML="";
   for(const c of STORY){const h=document.createElement("div");h.className="label";h.textContent=`Chapitre ${c.ch} · ${c.nom} · ${c.lv.filter(l=>SAVE.done.includes(l.id)).length}/${c.lv.length}`;B.appendChild(h);
@@ -1737,7 +1773,7 @@ function cleanCfg(c,nom){c=c&&typeof c==="object"?c:{};const s=c.stats&&typeof c
   for(const k in STATS){st[k]=Math.max(0,Math.min(MAXS,Math.floor(num(s[k],0))));sum+=st[k];}
   if(sum>TOTAL)for(const k in st)st[k]=Math.floor(st[k]*TOTAL/sum);
   return {nom:(typeof nom==="string"&&nom.trim()?nom:"Robot").slice(0,12),prim:HEX.test(c.prim)?c.prim:"#888899",sec:HEX.test(c.sec)?c.sec:"#333344",visor:HEX.test(c.visor)?c.visor:"#3fe0c4",
-    helmet:has(HELMETS,c.helmet)?c.helmet:"crete",weapon:has(WEAPONS,c.weapon)?c.weapon:"pulsar",fin:has(FINS,c.fin)?c.fin:"",pack:c.pack==="jetpack"?"jetpack":"",sk:["rat","poule","pigeon","alien"].includes(c.sk)?c.sk:"",toast:!!c.toast,stats:st};}
+    helmet:has(HELMETS,c.helmet)?c.helmet:"crete",weapon:has(WEAPONS,c.weapon)?c.weapon:"pulsar",fin:has(FINS,c.fin)?c.fin:"",pack:has(PACKS,c.pack)?c.pack:"",sk:["rat","poule","pigeon","alien"].includes(c.sk)?c.sk:"",toast:!!c.toast,stats:st};}
 function myBot(){const a=byId($("p1").value)||cur;return cleanCfg(a,a.nom);}
 function lobbyPresence(){const b=myBot();return {nom:b.nom,cfg:{prim:b.prim,sec:b.sec,visor:b.visor,helmet:b.helmet,weapon:b.weapon,fin:b.fin,stats:b.stats},st:NET.st,match:NET.match};}
 function netMe(){if(NET.r&&NET.st==="lobby"){NET.r.presence(lobbyPresence()).catch(()=>{});renderLobby();}}
@@ -1802,7 +1838,7 @@ function showOnlineEnd(){const w=G.win,M=G.mon;
   else if(G.pilot&&M){const me=G.pilot===G.me.peer,mw=!G.coop;$("ovTitle").textContent=mw?(me?"TU AS TOUT ÉCRASÉ !":`${MONS[M.k].nom} (${peerName(G.pilot).toUpperCase()}) GAGNE`):(me?"TON MONSTRE EST TOMBÉ":"LE MONSTRE EST VAINCU !");$("ovText").textContent="Retour au salon dans 8 secondes.";}
   else{$("ovTitle").textContent=G.coop?"VICTOIRE COLLECTIVE !":w===G.me.peer?"VICTOIRE !":w?`${peerName(w).toUpperCase()} GAGNE !`:(M&&!M.dead?`${MONS[M.k].nom} A GAGNÉ`:"PERSONNE NE GAGNE");
   $("ovText").textContent=(G.coop?`${MONS[M.k].nom} est vaincu, tout le monde gagne. `:"")+(G.timeout?"Temps écoulé. ":"")+"Retour au salon dans 8 secondes.";}
-  showScore();$("ovText").textContent+=payout(G.pilot?(G.pilot===G.me.peer?G.win===G.pilot:G.coop&&!G.me.dead):G.storyWon||G.coop||G.win===G.me.peer||(G.rule==="equipes"&&G.winTeam!=null&&G.winTeam===G.me.team));$("ovMain").textContent="Retour au salon";$("ovAlt").textContent="Atelier";$("ov").hidden=false;
+  showScore();$("ovText").textContent+=payout(G.pilot?(G.pilot===G.me.peer?G.win===G.pilot:G.coop&&!G.me.dead):G.storyWon||G.coop||G.win===G.me.peer||(G.rule==="equipes"&&G.winTeam!=null&&G.winTeam===G.me.team))+(G.unlockMsg||"");$("ovMain").textContent="Retour au salon";$("ovAlt").textContent="Atelier";$("ov").hidden=false;
   NET.backT=setTimeout(()=>{if(G&&G.online&&G.phase==="ko")backToLobby();},8000);}
 const clampX=v=>Math.max(-100,Math.min(WW+100,v)),clampY=v=>Math.max(-400,Math.min(WH+50,v));
 function remoteState(F,q){if(isPilotF(F)){pilotPark(F);return;}
@@ -1963,6 +1999,21 @@ try{const d=localStorage.getItem("fdr-decor");if(d&&(d==="hasard"||has(THEMES,d)
   T.addEventListener("pointerup",go);T.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" ")go();});addEventListener("keydown",e=>{if(!T.hidden&&e.key==="Enter")go();});
   if(new URLSearchParams(location.search).has("skip")||window.__skipTitle)go();})();
 if(TOUCHDEV){const o=$("mode").querySelector('option[value="duo"]');if(o)o.remove();}
+// Menu principal : Histoire / Coop / Forge
+function setHist(coop){$("hSolo").className=coop?"btn ghost":"btn";$("hCoop").className=coop?"btn":"btn ghost";$("hSolo").setAttribute("aria-pressed",!coop);$("hCoop").setAttribute("aria-pressed",!!coop);
+  $("mode").value=coop?"online":"histoire";$("mode").onchange();if(coop){$("regle").value="histoire";$("regle").onchange();}
+  $("launchTitle").textContent=coop?"Histoire en coop":"Histoire en solo";
+  $("netMsg").textContent=coop?"Un joueur héberge, les autres rejoignent. L'hôte choisit la mission dans le salon (règle « Histoire en coop »).":$("netMsg").textContent;}
+function goScr(k){document.body.dataset.scr=k;const histOpt=$("mode").querySelector('option[value="histoire"]');
+  $("navTitle").textContent={histoire:"HISTOIRE",coop:"ARÈNE",forge:"FORGE"}[k]||"";
+  if(histOpt)histOpt.hidden=k==="coop";
+  if(k==="histoire")setHist($("mode").value==="online"&&$("regle").value==="histoire");
+  else if(k==="coop"){$("launchTitle").textContent="Lancer un combat";if($("mode").value==="histoire"){$("mode").value=TOUCHDEV?"online":"ia";$("mode").onchange();}if($("regle").value==="histoire"){$("regle").value="ffa";$("regle").onchange();}}
+  {const o=$("regle").querySelector('option[value="histoire"]');if(o)o.hidden=k==="coop";}
+  try{localStorage.setItem("fdr-ecran",k);}catch(e){}scrollTo({top:0,behavior:"smooth"});}
+for(const b of document.querySelectorAll("#menu .mbtn"))b.onclick=()=>goScr(b.dataset.go);
+$("backMenu").onclick=()=>goScr("menu");$("hSolo").onclick=()=>setHist(false);$("hCoop").onclick=()=>setHist(true);
+document.body.dataset.scr=window.__skipTitle?"all":"menu";
 renderAll();requestAnimationFrame(previewLoop);
 })();
 </script>
