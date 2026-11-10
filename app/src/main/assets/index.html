@@ -49,6 +49,8 @@ input[type=color]{width:46px;height:34px;border:2px solid var(--line);background
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{background:var(--bg);border:2px solid var(--line);color:var(--fg);padding:6px 12px;font:600 14px var(--body);cursor:pointer}
 .chip[aria-pressed="true"]{background:var(--accent);color:#1b1100;border-color:var(--accent)}
+.chip.lock,.weapon.lock{opacity:.7;border-style:dashed}.chip.buy,.weapon.buy{opacity:1;border-color:var(--fusion);color:var(--fusion)}
+.coins{font:400 22px var(--display);color:#ffd04a}.coins::before{content:"";display:inline-block;width:12px;height:12px;margin-right:6px;background:#ffd04a;box-shadow:inset -2px -2px 0 #a26200;vertical-align:-1px}
 .weapons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 @media (max-width:460px){.weapon{padding:8px}.weapon b{font-size:14px}.weapon span{font-size:12px}}
 .weapon{text-align:left;background:var(--bg);border:2px solid var(--line);color:var(--fg);padding:10px;cursor:pointer;font-family:var(--body);display:flex;flex-direction:column;gap:2px}
@@ -195,8 +197,13 @@ kbd{font-family:var(--body);font-weight:700;font-size:12px;background:var(--bg);
           </div>
         </div>
         <div class="field">
-          <span class="label">Casque</span>
+          <div class="row" style="justify-content:space-between"><span class="label">Casque</span><span class="coins" id="coins"></span></div>
           <div class="chips" id="helmets"></div>
+          <p class="note" id="shopNote">Gagne des pièces en combat pour débloquer les objets marqués d'un cadenas.</p>
+        </div>
+        <div class="field">
+          <span class="label">Finition</span>
+          <div class="chips" id="fins"></div>
         </div>
         <div class="field">
           <span class="label">Canon de bras</span>
@@ -241,6 +248,7 @@ kbd{font-family:var(--body);font-weight:700;font-size:12px;background:var(--bg);
         <div class="kb"><b style="color:var(--fg)">Joueur 1</b><br><kbd>Q</kbd> <kbd>D</kbd> bouger · <kbd>Z</kbd> sauter · <kbd>F</kbd> tirer (maintenir pour charger) · <kbd>G</kbd> esquive · <kbd>E</kbd> objet spécial. En mode solo, les flèches + <kbd>K</kbd> <kbd>L</kbd> marchent aussi. Clavier QWERTY : mêmes touches physiques (WASD).</div>
         <div class="kb"><b style="color:var(--fg)">Joueur 2</b><br><kbd>←</kbd> <kbd>→</kbd> bouger · <kbd>↑</kbd> sauter · <kbd>L</kbd> tirer · <kbd>K</kbd> esquive · <kbd>O</kbd> objet spécial. Combat en 2 manches gagnantes.</div>
         <div class="tc"><b style="color:var(--fg)">Sur téléphone</b><br>Pouce gauche n'importe où à gauche de l'écran : glisse pour bouger, vers le haut pour sauter. À droite : <b>TIR</b> (maintiens pour charger), <b>SAUT</b>, <b>ESQ.</b> pour esquiver et <b>SPÉ</b> quand tu portes des mines ou un grappin.</div>
+        <div><b style="color:var(--fg)">Pièces</b><br>Chaque combat rapporte des pièces (dégâts, éliminations, victoire, vagues tenues). Dépense-les dans l'atelier pour débloquer casques, finitions et canons.</div>
         <div><b style="color:var(--fg)">Arène</b><br>Le décor se détruit sous les tirs. Des bonus tombent du ciel : <span style="color:#3fe0c4">soin</span>, <span style="color:#ffd04a">vitesse</span>, <span style="color:#ff5c7a">dégâts</span>, <span style="color:#7fd0ff">bouclier</span>, <span style="color:#ff9a3a">jetpack</span> (maintiens saut en l'air), <span style="color:#c34cff">mines</span> et <span style="color:#a6e05a">grappin</span>. Attention au fond de l'arène : lave, eau, acide ou abîme, y tomber élimine aussitôt. Deux parties sur cinq, un monstre géant débarque : s'il tombe, tout le monde gagne. En ligne, c'est le décor choisi par l'hôte qui compte.</div>
       </div>
       <div class="online" id="onlineBox" hidden>
@@ -298,12 +306,20 @@ const TOUCHDEV=("ontouchstart" in window)||navigator.maxTouchPoints>0||matchMedi
 (()=>{
 "use strict";
 // ---------- Données ----------
-const HELMETS={crete:"Crête",cornes:"Cornes",antenne:"Antenne",visiere:"Visière",dome:"Dôme"};
+const HELMETS={crete:"Crête",cornes:"Cornes",antenne:"Antenne",visiere:"Visière",dome:"Dôme",ailes:"Ailerons",couronne:"Couronne",flamme:"Flamme"};
+const FINS={"":"Standard",neon:"Néon",dore:"Doré",magma:"Magma"};
+// Boutique : objets à débloquer avec les pièces gagnées en combat
+const SHOP={"h:ailes":40,"h:couronne":60,"h:flamme":80,"f:neon":60,"f:dore":100,"f:magma":140,"w:rafale":120,"w:disque":150};
+let COINS=0,UNL=new Set();try{COINS=Math.max(0,parseInt(localStorage.getItem("fdr-pieces")||"0",10)||0);UNL=new Set(JSON.parse(localStorage.getItem("fdr-debloque")||"[]"));}catch(e){}
+function saveShop(){try{localStorage.setItem("fdr-pieces",String(COINS));localStorage.setItem("fdr-debloque",JSON.stringify([...UNL]));}catch(e){}}
+const owned=k=>!SHOP[k]||UNL.has(k);let BUY=null;
 const WEAPONS={
   pulsar:{nom:"Canon Pulsar",desc:"Tirs rapides et précis.",rate:12,dist:110},
   eventail:{nom:"Éventail",desc:"3 tirs en cône, courte portée.",rate:24,dist:70},
   lance:{nom:"Rayon Lance",desc:"Laser perçant, recharge lente.",rate:34,dist:150},
-  mortier:{nom:"Mortier",desc:"Bombe en cloche, explose en zone.",rate:40,dist:100}
+  mortier:{nom:"Mortier",desc:"Bombe en cloche, explose en zone.",rate:40,dist:100},
+  rafale:{nom:"Mitrailleuse",desc:"Pluie de petits tirs très rapides.",rate:5,dist:100},
+  disque:{nom:"Disque boomerang",desc:"Part, revient et traverse tout.",rate:30,dist:120}
 };
 const STATS={vie:"Blindage",puissance:"Puissance",vitesse:"Vitesse",saut:"Saut"};
 const TOTAL=10, MAXS=5;
@@ -332,7 +348,7 @@ function shade(hex,k){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255,b
 // ---------- Sprite du robot (pixel art procédural) ----------
 const OUT="#0a0a16";
 function drawBot(g,ox,oy,face,pose,a,t,opt={}){
-  const P=a.prim,S=a.sec,V=a.visor,L=shade(P,.45),D=shade(P,-.35);
+  const P=a.fin==="dore"?"#e8b730":a.prim,S=a.sec,V=a.visor,L=shade(P,.45),D=shade(P,-.35);
   const parts=[];const p=(x,y,w,h,c)=>parts.push([x,y,w,h,c]);
   const bob=(pose==="idle"&&Math.floor(t/30)%2)?1:0;
   // jambes
@@ -351,6 +367,8 @@ function drawBot(g,ox,oy,face,pose,a,t,opt={}){
   if(a.weapon==="pulsar"){p(4+k,-12+u,6,4,S);p(10+k,-11+u,1,2,V);}
   else if(a.weapon==="eventail"){p(4+k,-13+u,5,6,S);p(9+k,-13+u,1,2,V);p(9+k,-11+u,1,2,V);p(9+k,-9+u,1,2,V);}
   else if(a.weapon==="lance"){p(4+k,-12+u,8,3,S);p(6+k,-13+u,3,1,D);p(12+k,-12+u,1,3,V);}
+  else if(a.weapon==="rafale"){p(4+k,-12+u,8,3,S);p(4+k,-9+u,3,2,D);p(12+k,-12+u,1,1,V);p(12+k,-10+u,1,1,V);}
+  else if(a.weapon==="disque"){p(4+k,-12+u,5,4,S);p(9+k,-14+u,3,7,V);p(10+k,-11+u,1,1,"#ffffff");}
   else {p(4+k,-13+u,6,5,S);p(5+k,-14+u,4,1,D);p(10+k,-12+u,1,3,OUT);}
   // tête
   p(-4,-22+u,9,8,P);p(-3,-21+u,3,2,L);
@@ -361,11 +379,16 @@ function drawBot(g,ox,oy,face,pose,a,t,opt={}){
   else if(h==="cornes"){p(-5,-25+u,2,4,S);p(4,-25+u,2,4,S);p(-6,-27+u,1,2,L);p(5,-27+u,1,2,L);}
   else if(h==="antenne"){p(-1,-27+u,1,5,S);p(-2,-29+u,3,2,V);}
   else if(h==="visiere"){p(-4,-20+u,10,2,V);p(-5,-21+u,1,5,S);p(5,-19+u,1,1,"#ffffff");}
+  else if(h==="ailes"){p(-6,-22+u,2,5,S);p(-7,-25+u,1,5,S);p(5,-22+u,2,5,S);p(7,-25+u,1,5,S);}
+  else if(h==="couronne"){p(-4,-24+u,9,2,"#ffd04a");p(-4,-26+u,1,2,"#ffd04a");p(0,-27+u,1,3,"#ffd04a");p(4,-26+u,1,2,"#ffd04a");p(0,-24+u,1,1,"#ff5c7a");}
+  else if(h==="flamme"){p(-2,-25+u,5,2,"#ff6a1a");p(-1,-27+u,3,2,"#ffb52e");p(0,-29+u-(Math.floor(t/6)%2),1,2,"#fff3b0");}
   else {p(-3,-24+u,7,2,P);p(-2,-25+u,5,1,L);}
+  if(a.fin==="magma"){const c=Math.floor(t/10)%2?"#ffb52e":"#ff6a1a";p(-1,-12+u,1,3,c);p(0,-10+u,2,1,c);p(-3,-21+u,1,2,c);p(1,-5,1,2,c);}
+  if(a.fin==="dore"){const gx=Math.floor(t/3)%36-14;if(gx>=-4&&gx<=4){p(gx,-14+u,1,6,"#fffbe0");}}
   g.save();
   const draw=(x,y,w,h,c,pad)=>{const X=face>0?x:-x-w;g.fillStyle=c;g.fillRect(ox+X-pad,oy+y-pad,w+pad*2,h+pad*2);};
   if(opt.white){for(const q of parts)draw(q[0],q[1],q[2],q[3],"#ffffff",1);}
-  else{for(const q of parts)draw(q[0],q[1],q[2],q[3],opt.glow||OUT,1);for(const q of parts)draw(q[0],q[1],q[2],q[3],q[4],0);}
+  else{for(const q of parts)draw(q[0],q[1],q[2],q[3],opt.glow||(a.fin==="neon"?(Math.floor(t/12)%2?V:shade(V,-.3)):OUT),1);for(const q of parts)draw(q[0],q[1],q[2],q[3],q[4],0);}
   if(opt.shoot){const X=face>0?ox+12:ox-15;g.fillStyle="#ffffff";g.fillRect(X,oy-12+u,3,2);g.fillStyle=V;g.fillRect(X,oy-13+u,3,1);g.fillRect(X,oy-10+u,3,1);}
   g.restore();
 }
@@ -379,8 +402,17 @@ function renderList(){const L=$("myList");L.innerHTML="";
   $("delBtn").disabled=mine.length<2;$("delBtn").style.opacity=mine.length<2?.4:1;}
 function renderForm(){
   $("name").value=cur.nom;$("cPrim").value=cur.prim;$("cSec").value=cur.sec;$("cVis").value=cur.visor;
-  const H=$("helmets");H.innerHTML="";for(const k in HELMETS){const b=document.createElement("button");b.className="chip";b.textContent=HELMETS[k];b.setAttribute("aria-pressed",cur.helmet===k);b.onclick=()=>{cur.helmet=k;changed();};H.appendChild(b);}
-  const W=$("weapons");W.innerHTML="";for(const k in WEAPONS){const w=WEAPONS[k];const b=document.createElement("button");b.className="weapon";b.innerHTML=`<b>${w.nom}</b><span>${w.desc}</span>`;b.setAttribute("aria-pressed",cur.weapon===k);b.onclick=()=>{cur.weapon=k;changed();};W.appendChild(b);}
+  $("coins").textContent=`${COINS} pièce${COINS>1?"s":""}`;
+  const shopBtn=(key,cls,label,html,sel,apply)=>{const b=document.createElement("button");b.className=cls;const price=SHOP[key];
+    if(owned(key)){if(html)b.innerHTML=html;else b.textContent=label;b.setAttribute("aria-pressed",sel);b.onclick=apply;}
+    else{b.classList.add(BUY===key?"buy":"lock");const t=BUY===key?`Acheter ? ${price} pièces`:`🔒 ${label} · ${price}`;if(html)b.innerHTML=`<b>${t}</b><span>${(html.match(/<span>(.*)<\/span>/)||["",""])[1]}</span>`;else b.textContent=t;b.setAttribute("aria-pressed","false");
+      b.onclick=()=>{if(COINS<price){BUY=null;$("shopNote").textContent=`Il te manque ${price-COINS} pièce${price-COINS>1?"s":""} pour « ${label} ». Gagne-les en combat !`;renderForm();return;}
+        if(BUY!==key){BUY=key;$("shopNote").textContent=`Touche encore pour acheter « ${label} » (${price} pièces).`;renderForm();return;}
+        COINS-=price;UNL.add(key);BUY=null;saveShop();sfx("power");$("shopNote").textContent=`« ${label} » débloqué !`;apply();};}
+    return b;};
+  const H=$("helmets");H.innerHTML="";for(const k in HELMETS)H.appendChild(shopBtn("h:"+k,"chip",HELMETS[k],null,cur.helmet===k,()=>{cur.helmet=k;changed();}));
+  const Fi=$("fins");Fi.innerHTML="";for(const k in FINS)Fi.appendChild(shopBtn("f:"+k,"chip",FINS[k],null,(cur.fin||"")===k,()=>{cur.fin=k;changed();}));
+  const W=$("weapons");W.innerHTML="";for(const k in WEAPONS){const w=WEAPONS[k];W.appendChild(shopBtn("w:"+k,"weapon",w.nom,`<b>${w.nom}</b><span>${w.desc}</span>`,cur.weapon===k,()=>{cur.weapon=k;changed();}));}
   const St=$("stats");St.innerHTML="";const used=Object.values(cur.stats).reduce((s,v)=>s+v,0);
   $("pts").textContent=`${TOTAL-used} PT${TOTAL-used>1?"S":""} À RÉPARTIR`;
   for(const k in STATS){const v=cur.stats[k];const r=document.createElement("div");r.className="stat";
@@ -401,7 +433,7 @@ function changed(){save();renderAll();netMe();}
 $("name").addEventListener("input",e=>{cur.nom=e.target.value.slice(0,12);save();renderList();renderSelects();netMe();});
 for(const [id,key] of [["cPrim","prim"],["cSec","sec"],["cVis","visor"]])$(id).addEventListener("input",e=>{cur[key]=e.target.value;save();renderList();netMe();});
 $("newBtn").onclick=()=>{const a=randomBot();a.nom="Robot "+(mine.length+1);mine.push(a);cur=a;changed();};
-$("randBtn").onclick=()=>{const r=randomBot();Object.assign(cur,{prim:r.prim,sec:r.sec,visor:r.visor,helmet:r.helmet,weapon:r.weapon,stats:r.stats});changed();};
+$("randBtn").onclick=()=>{const r=randomBot();Object.assign(cur,{prim:r.prim,sec:r.sec,visor:r.visor,helmet:owned("h:"+r.helmet)?r.helmet:"crete",weapon:owned("w:"+r.weapon)?r.weapon:"pulsar",stats:r.stats});changed();};
 let delArm=false;
 $("delBtn").onclick=()=>{if(mine.length<2)return;if(!delArm){delArm=true;$("delBtn").textContent="Confirmer ?";setTimeout(()=>{delArm=false;$("delBtn").textContent="Supprimer";},3000);return;}
   mine=mine.filter(a=>a!==cur);cur=mine[0];delArm=false;$("delBtn").textContent="Supprimer";changed();};
@@ -699,6 +731,8 @@ function fire(F,big,at){const w=F.a.weapon,f=at?at.f:F.face,mx=(at?at.x:F.x)+f*1
   if(w==="pulsar"){big?add({vx:f*4,w:10,h:10,dmg:6*pw,big:true,life:120,cr:13}):add({vx:f*4.6,dmg:2*pw});}
   else if(w==="eventail"){const n=big?5:3,sp=big?.7:.8;for(let i=0;i<n;i++)add({vx:f*3.6,vy:(i-(n-1)/2)*sp,w:big?4:3,h:big?4:3,dmg:(big?2.2:1.4)*pw,life:big?42:32,cr:big?5:3});}
   else if(w==="lance"){big?add({kind:"laser",vx:f*7,w:32,h:6,dmg:7*pw,pierce:true,big:true,life:70,drill:10,cr:7}):add({kind:"laser",vx:f*7,w:16,h:2,dmg:3*pw,pierce:true,life:60,drill:3,cr:4});}
+  else if(w==="rafale"){if(big)for(let i=0;i<6;i++)add({vx:f*(4.6+i*.35),vy:(i-2.5)*.18,w:3,h:2,dmg:1.4*pw,life:55,cr:3});else add({vx:f*5.6,vy:((G.t*7)%5-2)*.06,w:3,h:2,dmg:.9*pw,life:45,cr:2});}
+  else if(w==="disque")add({kind:"disc",vx:f*(big?6.4:5.4),f,w:big?11:7,h:big?11:7,dmg:(big?5:2.4)*pw,pierce:true,big,life:big?120:95,drill:big?16:8,cr:big?6:3});
   else add({kind:"bomb",vx:f*(big?2.8:2.4),vy:big?-4.4:-3.6,w:5,h:5,dmg:(big?7:4)*pw,grav:.18,rad:big?32:20,big,life:200});
   F.shootAnim=10;sfx(big?"big":"shot");
   if(G.online&&!F.remote&&!at)G.myShots.push({i:++G.shotN,x:r1(F.x),y:r1(F.y),f,b:big?1:0,d:F.buffD>0?1:0,t:G.t,o:F.isBot?F.peer:undefined});}
@@ -926,7 +960,9 @@ function terrainHit(p){const k=p.kind,o=ownsLocally(p.owner);
   if(p.drill!==undefined){if(--p.drill<=0)p.dead=true;return;}
   p.dead=true;}
 function updProj(){const M=G.mon;
-  for(const p of G.proj){if(G.wind&&p.grav)p.vx+=G.wind*.02;p.x+=p.vx;p.vy+=p.grav;p.y+=p.vy;p.life--;
+  for(const p of G.proj){if(p.kind==="disc"){p.vx-=p.f*.14;if(!p.back&&Math.sign(p.vx)!==p.f){p.back=true;p.hits.clear();}
+      if(p.back&&p.owner&&Math.abs(p.x-p.owner.x)<10&&Math.abs(p.y-(p.owner.y-11))<16){p.dead=true;continue;}}
+    if(G.wind&&p.grav)p.vx+=G.wind*.02;p.x+=p.vx;p.vy+=p.grav;p.y+=p.vy;p.life--;
     if(p.kind!=="shock"&&p.kind!=="bite"&&solid(p.x,p.y)){terrainHit(p);if(p.dead)continue;}
     for(const T of G.f){if(T===p.owner||T.dead||p.hits.has(T)||ally(p.owner,T))continue;
       if(Math.abs(p.x-T.x)<5+p.w/2&&p.y+p.h/2>T.y-21&&p.y-p.h/2<T.y){
@@ -1008,13 +1044,16 @@ function showScore(){const el=$("ovScore");el.innerHTML="";const rows=scoreRows(
     td(Math.round(r.dmg));td(r.kills);if(M){const c=td(Math.round(r.mon));if(M.dead&&G.monKiller===r.k){c.textContent+=" ⚔";c.title="Coup final";c.className="star";}}
     t.appendChild(tr);}
   el.appendChild(t);if(M&&M.dead&&rows.some(r=>r.k===G.monKiller)){const p=document.createElement("p");p.textContent=`⚔ Coup final sur ${MONS[M.k].nom} : ${rows.find(r=>r.k===G.monKiller).nom}`;el.appendChild(p);}}
+function payout(win){if(G.paid)return "";G.paid=true;const rows=scoreRows();const me=G.online?rows.find(r=>r.me):rows[0];if(!me)return "";
+  const n=Math.max(5,Math.min(400,10+Math.round(me.dmg/8)+me.kills*6+Math.floor(me.mon/15)+(win?20:0)+(G.rule==="vagues"?Math.max(0,G.wave-1)*10:0)+(G.coop?25:0)));
+  COINS+=n;saveShop();try{renderForm();}catch(e){}return ` +${n} pièces gagnées (total ${COINS}).`;}
 function endMatch(coop){G.phase="over";if(!G.online)tallyKills();
   if(coop==="vagues"){const n=Math.max(0,G.wave-1);$("ovTitle").textContent="FIN DE LA RÉSISTANCE";$("ovText").textContent=`${G.a[0].nom} et ${G.a[1].nom} ont tenu ${n} vague${n>1?"s":""}. Record à battre !`;}
   else if(coop){$("ovTitle").textContent="VICTOIRE COLLECTIVE !";$("ovText").textContent=`${G.a[0].nom} et ${G.a[1].nom} ont vaincu ${MONS[G.mon.k].nom}.`;}
   else{const w=G.wins[0]===G.wins[1]?-1:(G.wins[0]>G.wins[1]?0:1);
     $("ovTitle").textContent=w<0?"MATCH NUL":`${G.a[w].nom.toUpperCase()} GAGNE !`;
     $("ovText").textContent=`Manches : ${G.a[0].nom} ${G.wins[0]} - ${G.wins[1]} ${G.a[1].nom}`+(G.solo&&w===1?". Essaie une autre arme ou d'autres stats à l'atelier.":"");}
-  showScore();$("ovMain").textContent="Revanche";$("ovAlt").textContent="Atelier";$("ov").hidden=false;}
+  showScore();$("ovText").textContent+=payout(coop===true||(!coop&&G.wins[0]>G.wins[1]));$("ovMain").textContent="Revanche";$("ovAlt").textContent="Atelier";$("ov").hidden=false;}
 
 // ---------- Rendu ----------
 function txt(s,x,y,size,col,al){g.font=`${Math.round(size*1.9)}px "Jersey 10", monospace`;g.textAlign=al||"center";g.textBaseline="top";g.fillStyle="#0a0a16";g.fillText(s,x+1,y+1);g.fillStyle=col;g.fillText(s,x,y);}
@@ -1074,6 +1113,7 @@ function drawItem(it){const I=ITEMS[it.k],x=Math.round(it.x),y=Math.round(it.y),
   else if(it.k==="mine"){g.fillRect(x-3,Y+2,6,4);g.fillRect(x-1,Y,2,2);}
   else{g.fillRect(x-1,Y,2,6);g.fillRect(x-3,Y,6,2);g.fillRect(x-3,Y+2,2,1);g.fillRect(x+1,Y+2,2,1);}}
 function drawProj(p){const x=p.x,y=p.y;
+  if(p.kind==="disc"){const r=p.big?5:3;g.fillStyle=p.col;if(G.t%4<2){g.fillRect(x-r-1,y-1,r*2+2,2);g.fillRect(x-1,y-r-1,2,r*2+2);}else{for(const [a,b] of [[-1,-1],[1,-1],[-1,1],[1,1]])g.fillRect(x+a*r*.7-1,y+b*r*.7-1,2,2);}g.fillStyle="#ffffff";g.fillRect(x-1,y-1,2,2);return;}
   if(p.kind==="bomb"){g.fillStyle="#0a0a16";g.fillRect(x-3,y-3,7,7);g.fillStyle=G.t%8<4?"#ff5c7a":p.owner.a.sec;g.fillRect(x-2,y-2,5,5);g.fillStyle="#fff";g.fillRect(x-1,y-2,1,1);return;}
   if(p.kind==="lava"){g.fillStyle="#7a2a16";g.beginPath();g.arc(x,y,4.5,0,7);g.fill();g.fillStyle=G.t%6<3?"#ff7a1a":"#ffb52e";g.beginPath();g.arc(x,y,3.2,0,7);g.fill();g.fillStyle="#ffe14a";g.fillRect(x-1,y-2,2,2);return;}
   if(p.kind==="web"){g.strokeStyle="#efeaff";g.lineWidth=1;g.beginPath();for(let i=0;i<4;i++){const a=i*Math.PI/4;g.moveTo(x-Math.cos(a)*5,y-Math.sin(a)*5);g.lineTo(x+Math.cos(a)*5,y+Math.sin(a)*5);}g.stroke();return;}
@@ -1173,9 +1213,9 @@ function cleanCfg(c,nom){c=c&&typeof c==="object"?c:{};const s=c.stats&&typeof c
   for(const k in STATS){st[k]=Math.max(0,Math.min(MAXS,Math.floor(num(s[k],0))));sum+=st[k];}
   if(sum>TOTAL)for(const k in st)st[k]=Math.floor(st[k]*TOTAL/sum);
   return {nom:(typeof nom==="string"&&nom.trim()?nom:"Robot").slice(0,12),prim:HEX.test(c.prim)?c.prim:"#888899",sec:HEX.test(c.sec)?c.sec:"#333344",visor:HEX.test(c.visor)?c.visor:"#3fe0c4",
-    helmet:has(HELMETS,c.helmet)?c.helmet:"crete",weapon:has(WEAPONS,c.weapon)?c.weapon:"pulsar",stats:st};}
+    helmet:has(HELMETS,c.helmet)?c.helmet:"crete",weapon:has(WEAPONS,c.weapon)?c.weapon:"pulsar",fin:has(FINS,c.fin)?c.fin:"",stats:st};}
 function myBot(){const a=byId($("p1").value)||cur;return cleanCfg(a,a.nom);}
-function lobbyPresence(){const b=myBot();return {nom:b.nom,cfg:{prim:b.prim,sec:b.sec,visor:b.visor,helmet:b.helmet,weapon:b.weapon,stats:b.stats},st:NET.st,match:NET.match};}
+function lobbyPresence(){const b=myBot();return {nom:b.nom,cfg:{prim:b.prim,sec:b.sec,visor:b.visor,helmet:b.helmet,weapon:b.weapon,fin:b.fin,stats:b.stats},st:NET.st,match:NET.match};}
 function netMe(){if(NET.r&&NET.st==="lobby"){NET.r.presence(lobbyPresence()).catch(()=>{});renderLobby();}}
 function myPeer(){if(!NET.r)return null;const m=NET.r.peers().find(p=>p.sameTab);return m?m.peer:null;}
 function roomPeers(){return NET.r?NET.r.peers().filter(p=>p.sameTab||(p.presence&&typeof p.presence.nom==="string")):[];}
@@ -1233,7 +1273,7 @@ function showOnlineEnd(){const w=G.win,M=G.mon;
   else if(G.rule==="equipes"&&!G.coop){const t=G.winTeam;$("ovTitle").textContent=t==null?(M&&!M.dead?`${MONS[M.k].nom} A GAGNÉ`:"ÉGALITÉ"):t===G.me.team?"TON ÉQUIPE GAGNE !":`ÉQUIPE ${TEAMN[t]} GAGNE`;$("ovText").textContent=(G.timeout?"Temps écoulé. ":"")+"Retour au salon dans 8 secondes.";}
   else{$("ovTitle").textContent=G.coop?"VICTOIRE COLLECTIVE !":w===G.me.peer?"VICTOIRE !":w?`${peerName(w).toUpperCase()} GAGNE !`:(M&&!M.dead?`${MONS[M.k].nom} A GAGNÉ`:"PERSONNE NE GAGNE");
   $("ovText").textContent=(G.coop?`${MONS[M.k].nom} est vaincu, tout le monde gagne. `:"")+(G.timeout?"Temps écoulé. ":"")+"Retour au salon dans 8 secondes.";}
-  showScore();$("ovMain").textContent="Retour au salon";$("ovAlt").textContent="Atelier";$("ov").hidden=false;
+  showScore();$("ovText").textContent+=payout(G.coop||G.win===G.me.peer||(G.rule==="equipes"&&G.winTeam!=null&&G.winTeam===G.me.team));$("ovMain").textContent="Retour au salon";$("ovAlt").textContent="Atelier";$("ov").hidden=false;
   NET.backT=setTimeout(()=>{if(G&&G.online&&G.phase==="ko")backToLobby();},8000);}
 const clampX=v=>Math.max(-100,Math.min(WW+100,v)),clampY=v=>Math.max(-400,Math.min(WH+50,v));
 function remoteState(F,q){

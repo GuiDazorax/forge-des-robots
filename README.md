@@ -4,7 +4,16 @@
 
 *Forge ton robot. Fais trembler l'arène.*
 
-Jeu de combat de robots en pixel art, pour Android. Crée ton robot (couleurs, casque, canon, stats) et affronte l'ordinateur, un ami sur le même téléphone, ou jusqu'à 7 amis en Bluetooth.
+Jeu de combat de robots en pixel art, pour Android. Crée ton robot (couleurs, casque, canon, stats) et affronte l'ordinateur ou jusqu'à 7 amis en Bluetooth.
+
+## Contenu
+
+- 6 arènes destructibles (ville, forêt, montagne, volcan, mer, arctique) avec leurs effets : lave qui monte, marée, vent, glace. Le fond de l'arène est mortel.
+- Règles : chacun pour soi, équipes rouge contre bleue, vagues de monstres en coop.
+- Monstres géants, bonus et objets spéciaux (bouclier, jetpack, mines, grappin).
+- Robots ordinateur pour compléter une partie, tableau des scores, mode spectateur.
+- Pièces gagnées en combat pour débloquer casques, finitions et canons.
+- Musique chiptune originale et vibrations.
 
 ## Installer l'app
 
@@ -19,7 +28,7 @@ Chaque push sur `main` refabrique l'APK automatiquement (onglet Actions).
 1. Tout le monde choisit son robot dans « Joueur 1 », puis le mode **Bluetooth**.
 2. Un joueur touche **Héberger** et accepte que son téléphone soit visible.
 3. Les autres touchent **Chercher une partie**, puis le nom du téléphone de l'hôte.
-4. Quand tout le monde est dans le salon, l'hôte touche **Lancer la partie**. Dernier robot debout gagne.
+4. L'hôte choisit la règle et le décor, ajoute s'il veut des robots ordinateur avec **+**, puis touche **Lancer la partie**.
 
 Au-delà de 4 joueurs, le Bluetooth peut ralentir un peu la synchronisation.
 
