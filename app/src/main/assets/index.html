@@ -189,7 +189,7 @@ kbd{font-family:var(--body);font-weight:700;font-size:12px;background:var(--bg);
 
   <section id="atelier" class="wrap" style="gap:20px">
     <div class="menu" id="menu">
-      <button class="mbtn h" data-go="histoire"><b>HISTOIRE</b><span>Les aliens ont fait de la Terre leurs toilettes. Sauve la planète, seul ou en coop.</span></button>
+      <button class="mbtn h" data-go="histoire"><b>HISTOIRE</b><span>Les aliens ont fait de la Terre leurs toilettes. Fonce vers la droite, nettoie les zones et sauve la planète, seul ou en coop.</span></button>
       <button class="mbtn c" data-go="coop"><b>ARÈNE</b><span>Tous les combats : contre l'ordinateur, à plusieurs en Bluetooth ou en ligne, en équipes, en vagues de monstres.</span></button>
       <button class="mbtn" data-go="forge"><b>FORGE</b><span>Construis ton robot : couleurs, casque, canon, stats et objets à débloquer.</span></button>
     </div>
@@ -626,7 +626,8 @@ prefBtns();
 // ---------- Jeu ----------
 const VW=384,VH=216;                       // repère de l'interface (dessinée à l'échelle 2)
 const SW=768,SH=432;                       // taille du canevas de jeu (écran)
-const WW=1536,WH=768,CS=4,CW=WW/CS,CH=WH/CS; // monde : 1536 x 768, terrain en cases de 4 px
+const WH=768,CS=4,CH=WH/CS;let WW=1536,CW=WW/CS; // monde : 1536 x 768 (arène) ou plus long (niveaux de l'histoire), terrain en cases de 4 px
+const RUNW=4608; // longueur d'un niveau de l'histoire
 const cv=$("game"),g=cv.getContext("2d");g.imageSmoothingEnabled=false;
 let G=null,raf=0,paused=false;
 const keys=new Set(),touch={};
@@ -708,6 +709,7 @@ function pickTheme(seed){const r=rng((seed^0x2545f491)>>>0);r();return THK[Math.
 // ---------- Terrain destructible ----------
 const TER={c:new Uint8Array(CW*CH),cv:document.createElement("canvas")};TER.cv.width=WW;TER.cv.height=WH;
 const tg=TER.cv.getContext("2d");
+function setWorld(w){if(w===WW&&TER.c.length===CW*CH)return;WW=w;CW=w/CS;TER.c=new Uint8Array(CW*CH);TER.cv.width=WW;TER.cv.height=WH;}
 const cell=(cx,cy)=>(cx<0||cx>=CW)?3:(cy<0||cy>=CH?0:TER.c[cy*CW+cx]);
 const solid=(x,y)=>cell(Math.floor(x/CS),Math.floor(y/CS))>0;
 function boxHit(x0,y0,x1,y1){const a=Math.floor(x0/CS),b=Math.floor(x1/CS),c0=Math.floor(y0/CS),d=Math.floor(y1/CS);
@@ -744,7 +746,10 @@ function genTerrain(seed,th){const r=rng(seed),c=TER.c;c.fill(0);TH=THEMES[th]||
     for(let cy=top-hh;cy<top;cy++)for(let cx=x0;cx<x0+w;cx++)set(cx,cy,th==="foret"?2:1);
     for(let y=top-10;y>top-hh;y-=11){const sd=((top-y)/11)%2<1?-1:1;for(let j=0;j<6;j++)set(sd<0?x0-1-j:x0+w+j,y,1);}
     for(let cx=x0-3;cx<x0+w+3;cx++)set(cx,top-hh,1);}
-  const deco=(n,fn)=>{for(let i=0;i<n;i++){const x0=Math.floor(CW*(i+.5)/n+(r()-.5)*14);if(x0<4||x0>CW-8||!H[x0]||!H[x0+3]||!H[x0-1])continue;fn(x0,CH-Math.max(H[x0],H[x0+1]));}};
+  themeDeco(r,th,H,set,1);
+  paintAll();}
+function themeDeco(r,th,H,set,k){
+  const deco=(n,fn)=>{n=Math.round(n*k);for(let i=0;i<n;i++){const x0=Math.floor(CW*(i+.5)/n+(r()-.5)*14);if(x0<4||x0>CW-8||!H[x0]||!H[x0+3]||!H[x0-1])continue;fn(x0,CH-Math.max(H[x0],H[x0+1]));}};
   if(th==="ville")deco(4,(x0,top)=>{const w=3+Math.floor(r()*2),hh=8+Math.floor(r()*6);for(let cy=top-hh;cy<top;cy++)for(let cx=x0;cx<x0+w;cx++)set(cx,cy,1);});
   else if(th==="foret")deco(12,(x0,top)=>{const hh=6+Math.floor(r()*4);for(let cy=top-hh;cy<top;cy++){set(x0,cy,2);set(x0+1,cy,2);}
     [2,4,5,5,4,2].forEach((hw,j)=>{for(let cx=x0-hw+1;cx<=x0+hw;cx++)set(cx,top-hh-5+j,4);});});
@@ -752,7 +757,38 @@ function genTerrain(seed,th){const r=rng(seed),c=TER.c;c.fill(0);TH=THEMES[th]||
     for(let cx=x0-3;cx<=x0+4;cx++)set(cx,top-hh,4);set(x0-3,top-hh+1,4);set(x0+4,top-hh+1,4);for(let cx=x0-1;cx<=x0+2;cx++)set(cx,top-hh-1,4);});
   else if(th==="arctique")deco(10,(x0,top)=>{const hh=5+Math.floor(r()*5);for(let j=0;j<hh;j++){const hw=Math.floor((hh-j)/3);for(let cx=x0-hw;cx<=x0+hw+1;cx++)set(cx,top-1-j,4);}});
   else if(th==="volcan")deco(8,(x0,top)=>{const hh=3+Math.floor(r()*3);for(let j=0;j<hh;j++)for(let cx=x0-(hh-j>>1);cx<=x0+1+(hh-j>>1);cx++)set(cx,top-1-j,4);});
-  paintAll();}
+}
+// Niveau de l'histoire façon run-and-gun : on avance vers la droite, des zones de combat bloquent le passage, la sortie (ou le boss) au bout.
+function genRun(seed,th,lv){const r=rng((seed^0x9e3779b9)>>>0),c=TER.c;c.fill(0);TH=THEMES[th]||THEMES.ville;
+  const ty=lv.goal.type,nz=ty==="combat"?4:3,zones=[];
+  for(let i=0;i<nz;i++){const cx=Math.round(CW*(.2+i*(.66/(nz-1))));zones.push({c0:cx-68,c1:cx+68,surv:ty==="survie"&&i===nz-1});}
+  const inZ=(cx,m)=>zones.some(z=>cx>=z.c0-m&&cx<=z.c1+m);
+  const H=new Int16Array(CW),p=[r()*6.3,r()*6.3],amp={montagne:12,volcan:7,mer:4,arctique:5}[th]||6;
+  for(let cx=0;cx<CW;cx++)H[cx]=Math.round(30+amp*Math.sin(cx*.021+p[0])+amp*.5*Math.sin(cx*.057+p[1]));
+  for(const z of zones){const hz=H[(z.c0+z.c1)>>1];for(let cx=z.c0-4;cx<=z.c1+4;cx++)H[cx]=hz;}
+  for(let cx=0;cx<70;cx++)H[cx]=H[70];for(let cx=CW-80;cx<CW;cx++)H[cx]=H[CW-81];
+  // marches et plateaux pour la verticalité
+  for(let i=0;i<9;i++){const x0=Math.floor(80+r()*(CW-200)),w=18+Math.floor(r()*28),up=5+Math.floor(r()*5);
+    if(inZ(x0,8)||inZ(x0+w,8)||x0+w>CW-90)continue;for(let cx=x0;cx<x0+w;cx++)H[cx]+=up;}
+  // fosses (franchissables d'un saut, ou avec le jetpack)
+  const pits=[];for(let i=0;i<8;i++){const x0=Math.floor(90+r()*(CW-200)),w=5+Math.floor(r()*4);
+    if(inZ(x0,10)||inZ(x0+w,10)||x0+w>CW-95||pits.some(q=>Math.abs(q-x0)<40))continue;pits.push(x0);for(let cx=x0;cx<x0+w;cx++)H[cx]=0;}
+  for(let cx=0;cx<CW;cx++){const h=H[cx];for(let cy=CH-h;cy<CH;cy++)c[cy*CW+cx]=cy>CH-h+5?2:1;}
+  const set=(cx,cy,v)=>{if(cx>=0&&cx<CW&&cy>=0&&cy<CH)c[cy*CW+cx]=v;};
+  const island=(x0,y0,w,t)=>{for(let j=0;j<t+3;j++){const ins=j<t?0:(j-t+1)*2;for(let cx=x0+ins;cx<x0+w-ins;cx++)set(cx,y0+j,j<t?1:2);}};
+  const top=cx=>CH-Math.max(H[Math.max(0,cx-3)]||0,H[cx]||0,H[Math.min(CW-1,cx+3)]||0);
+  // plateformes le long du chemin
+  for(let cx=90;cx<CW-100;cx+=34+Math.floor(r()*20)){if(inZ(cx,4))continue;const w=10+Math.floor(r()*7),y0=top(cx)-(11+Math.floor(r()*3));island(cx-(w>>1),y0,w,3);
+    if(r()<.4){const w2=9+Math.floor(r()*5),x2=cx+Math.floor((r()-.5)*16);island(x2-(w2>>1),y0-(11+Math.floor(r()*2)),w2,3);}}
+  // arènes des zones : trois plateformes et des caisses pour se couvrir
+  for(const z of zones){const m=(z.c0+z.c1)>>1,g0=top(m);island(z.c0+14,g0-11,16,3);island(m-9,g0-22,18,3);island(z.c1-30,g0-11,16,3);
+    for(const q of [z.c0+40,z.c1-44]){for(let cy=g0-4;cy<g0;cy++)for(let cx=q;cx<q+4;cx++)set(cx,cy,1);}}
+  // caisses sur le chemin
+  for(let i=0;i<10;i++){const cx=Math.floor(100+r()*(CW-220));if(inZ(cx,4)||!H[cx]||!H[cx+4])continue;const g0=top(cx),hh=r()<.3?7:4;for(let cy=g0-hh;cy<g0;cy++)for(let cx2=cx;cx2<cx+4;cx2++)set(cx2,cy,1);}
+  themeDeco(r,th,H,set,CW/384*.7);
+  paintAll();
+  const pats=[];for(let i=0;i<=nz;i++){const a=i===0?90:zones[i-1].c1+10,b=i<nz?zones[i].c0-10:CW-60;if(b-a>90){pats.push(Math.round((a+(b-a)*.45)*CS));if(b-a>220)pats.push(Math.round((a+(b-a)*.8)*CS));}}
+  return {zones:zones.map(z=>({x0:z.c0*CS,x1:z.c1*CS,surv:z.surv})),exitX:(CW-30)*CS,pats:pats.filter(x=>x<(CW-60)*CS).sort((a,b)=>a-b)};}
 function paintCell(cx,cy){const v=cell(cx,cy),x=cx*CS,y=cy*CS;tg.clearRect(x,y,CS,CS);if(!v)return;const P=TH.pal;
   const top=!cell(cx,cy-1),k=(cx*7+cy*13)%11;
   tg.fillStyle=v===4?(k<4?P.x2:P.x):v===3?"#191b3a":v===2?(k<3?P.r2:P.r):(k<2?P.a2:P.a);tg.fillRect(x,y,CS,CS);
@@ -832,6 +868,10 @@ function stepDeco(){if(!G.crit)return;
 function splashSmall(x){for(let i=0;i<5;i++)G.fx.push({x,y:LIQY-1,vx:(Math.random()-.5)*1.5,vy:-1-Math.random()*1.5,life:16,c:TH.liq.c1,s:2});}
 const px=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(Math.round(x),Math.round(y),w,h);};
 // Fond animé : ce qui bouge dans le ciel, derrière le terrain
+function drawBgTiles(){const bg=getBg(G.theme);if(WW<=1536){g.drawImage(bg,0,0,WW,WH);return;}
+  const c=G.cam,vw=SW/c.z,vl=c.x-vw/2,off=vl*.55;
+  for(let i=Math.floor((vl-off)/1536);i<=Math.floor((vl+vw-off)/1536);i++){const x=off+i*1536;
+    if(i%2){g.save();g.translate(x+1536,0);g.scale(-1,1);g.drawImage(bg,0,0,1536,WH);g.restore();}else g.drawImage(bg,x,0,1536,WH);}}
 function drawSkyLife(){const th=G.theme,t=G.t;
   if(th==="ville"){for(let i=0;i<4;i++){const sp=.6+i*.25,dir=i%2?1:-1,x=((i*397+t*sp*dir)%(WW+80)+WW+80)%(WW+80)-40,y=70+i*38;
       px(x-6,y,12,3,["#ff5c7a","#3fe0c4","#ffd04a","#c34cff"][i]);px(x-4,y-2,7,2,"#2a2d5e");px(x+(dir>0?5:-7),y+1,2,1,"#ffffff");px(x+(dir>0?-8:6),y+1,2,1,t%6<3?"#ff7a1a":"#ffd04a");}
@@ -876,10 +916,10 @@ function drawProps(){if(!G.deco)return;const t=G.t;
       case"salam":px(x-4,y-2,8,2,"#ff7a1a");px(x+f*4,y-3,2,2,"#ff7a1a");px(x-f*5,y-1,2,1,"#ffd04a");px(x-2,y-2,1,1,"#2a1010");px(x+1,y-2,1,1,"#2a1010");break;
       case"crabe":px(x-3,y-3,6,3,"#ff5a3a");px(x-4,y-5+(st?1:0),2,2,"#ff5a3a");px(x+2,y-5+(st?0:1),2,2,"#ff5a3a");px(x-1,y-4,1,1,"#2a2a2a");px(x+1,y-4,1,1,"#2a2a2a");px(x-3,y,1,1,"#c03a2a");px(x+2,y,1,1,"#c03a2a");break;
       case"pingouin":px(x-2,y-8,5,8,"#1b1e2a");px(x-1,y-6,3,5,"#ffffff");px(x+f*2,y-7,2,1,"#ffb03a");px(x+f,y-8,1,1,"#ffffff");px(x-2+(run&&st?1:0),y,2,1,"#ffb03a");px(x+1-(run&&st?1:0),y,2,1,"#ffb03a");break;}}}
-function drawAmbient(){const th=G.theme,t=G.t;let n=0,col,vx,vy,sz=1;
+function drawAmbient(){const th=G.theme,t=G.t;let n=0,col,vx,vy,sz=1;const k=WW/1536;
   if(th==="arctique"){n=70;col="#ffffff";vx=.25;vy=.55;sz=2;}else if(th==="volcan"){n=50;col="#ff9a3a";vx=.15;vy=-.5;}
   else if(th==="foret"){n=26;col="#c8f06a";vx=.3;vy=.35;sz=2;}else if(th==="montagne"){n=G.wind?70:40;col="#ffffffaa";vx=.2+G.wind*3;vy=.3;}else return;
-  g.fillStyle=col;for(let i=0;i<n;i++){const k=1+(i%3)*.4;const x=((i*137.5+t*vx*k+Math.sin(t*.02+i)*8)%WW+WW)%WW,y=((i*71.3+t*vy*k)%WH+WH)%WH;g.fillRect(Math.round(x),Math.round(y),sz,sz);}}
+  n=Math.round(n*k);g.fillStyle=col;for(let i=0;i<n;i++){const k=1+(i%3)*.4;const x=((i*137.5+t*vx*k+Math.sin(t*.02+i)*8)%WW+WW)%WW,y=((i*71.3+t*vy*k)%WH+WH)%WH;g.fillRect(Math.round(x),Math.round(y),sz,sz);}}
 function drawLiquid(){const L=TH.liq,t=G.t;g.globalAlpha=L.a;
   const gr=g.createLinearGradient(0,LIQY,0,WH);gr.addColorStop(0,L.c1);gr.addColorStop(1,L.c2);g.fillStyle=gr;
   for(let x=0;x<WW;x+=4){const w=Math.round(Math.sin(x*.04+t*.05)*1.6+Math.sin(x*.11-t*.03));g.fillRect(x,LIQY+w,4,WH-LIQY-w);}
@@ -901,14 +941,14 @@ function safeSpot(x){x=Math.round(x);for(let d=0;d<WW;d+=6)for(const sg of [1,-1
     if(!d)break;}
   return {x:Math.max(14,Math.min(WW-14,x)),y:surfaceY(x,0)};}
 function findGround(x){return safeSpot(x).x;}
-function place(F,i,n){const s=safeSpot(slotX(i,n));F.x=s.x;F.y=s.y;F.face=F.x<WW/2?1:-1;}
+function place(F,i,n){const s=safeSpot(G&&G.run?60+i*26:slotX(i,n));F.x=s.x;F.y=s.y;F.face=F.x<WW/2?1:-1;}
 function makeGame(o){G=Object.assign({t:0,pt:0,f:[],proj:[],fx:[],feed:[],items:[],taken:new Set(),myTaken:[],itemT:300,shake:0,monDmg:0,remoteMd:{},
   myCraters:[],crN:0,seenCr:new Set(),myShots:[],shotN:0,seenShots:new Set(),monShots:[],msN:0,cam:{x:WW/2,y:WH/2,z:1},mon:null,mines:[],mineN:0,mineTag:Math.random().toString(36).slice(2,6),dealt:{},monBy:{},monLast:null,monKiller:null,prevMd:{},specI:0},o);}
-function setupRound(seed,th){G.seed=seed>>>0;const ft=window.__forceTheme;G.theme=has(THEMES,ft)?ft:has(THEMES,th)?th:pickTheme(G.seed);genTerrain(G.seed,G.theme);LIQY=LIQ0;setupDeco();G.envT=0;G.wind=0;G.proj=[];G.fx=[];G.items=[];G.mines=[];G.taken=new Set();G.myTaken=[];G.itemT=300;G.monDmg=0;
+function setupRound(seed,th){G.seed=seed>>>0;const ft=window.__forceTheme;G.theme=has(THEMES,ft)?ft:has(THEMES,th)?th:pickTheme(G.seed);const run=G.rule==="histoire"&&G.storyLv&&!G.bossStage;setWorld(run?RUNW:1536);G.run=null;if(run)G.run=genRun(G.seed,G.theme,G.storyLv);else genTerrain(G.seed,G.theme);LIQY=LIQ0;setupDeco();G.envT=0;G.wind=0;G.proj=[];G.fx=[];G.items=[];G.mines=[];G.taken=new Set();G.myTaken=[];G.itemT=300;G.monDmg=0;
   G.phase="intro";G.pt=0;G.shake=0;G.coop=false;G.win=null;G.timeout=false;G.dug=0;
   const r=rng(G.seed^0x5bd1e995);r();const roll=r(),kind=MONK[Math.floor(r()*MONK.length)],fm=window.__forceMon;G.pilot=null;G.mon=(fm||G.rule==="vagues"||G.mj?true:G.rule==="equipes"?roll<.2:roll<.4)?makeMonster(has(MONS,fm)?fm:kind,r):null;G.wave=0;
   if(G.mon&&G.rule==="vagues"){G.wave=1;G.mon.mx=Math.round(G.mon.mx*waveMul(1));G.mon.hp=G.mon.mx;G.mon.base=0;}
-  if(G.rule==="histoire")G.mon=G.storyLv&&G.storyLv.boss?makeMonster(G.storyLv.boss,r):null;
+  if(G.rule==="histoire")G.mon=G.storyLv&&G.storyLv.boss&&!G.run?makeMonster(G.storyLv.boss,r):null;
   if(G.mon&&G.mj){const hs=G.players.filter(x=>!x.includes("#b"));G.pilot=hs[Math.floor(r()*hs.length)];G.mon.mx=Math.round(G.mon.mx*1.25);G.mon.hp=G.mon.mx;}
   G.introLen=G.mon?330:G.rule==="histoire"?150:110;}
 // Monstre joueur : le pilote envoie ses touches, l'hôte fait bouger le monstre avec.
@@ -1006,7 +1046,7 @@ function updFighter(F,inp,O){
   F.wasBlocked=F.blocked;F.blocked=false;
   if(F.buffS>0)F.buffS--;if(F.buffD>0)F.buffD--;if(F.web>0)F.web--;if(F.shield>0)F.shield--;if(F.jet>0)F.jet--;F.jetOn=false;
   const specP=inp.spec&&!pr.spec;
-  if(F.dead){F.hook=null;F.held=0;F.deadT++;F.vy=Math.min(F.y>LIQY?1:7,F.vy+.3);F.vx*=.9;moveBody(F);return;}
+  if(F.dead){F.hook=null;F.held=0;F.deadT++;F.vy=Math.min(F.y>LIQY?1:7,F.vy+.3);F.vx*=.9;moveBody(F);if(G.st&&!F.foe&&!F.remote)storyLives(F);return;}
   if(ufoStep(F,shootP||(inp.shoot&&F.t%12===0)))return;
   const webbed=F.web>0;
   let mv=0;if(F.stun>0)F.stun--;else if(!webbed){if(inp.left)mv--;if(inp.right)mv++;}
@@ -1036,6 +1076,7 @@ function updFighter(F,inp,O){
       if(d<14||H.t>55||(jumpP&&H.t>4)||F.stun){F.hook=null;if(jumpP)F.vy=-4.5;}else{F.vx=dx/d*6;F.vy=dy/d*6;}}}
   moveBody(F);
   if(!F.held&&boxHit(F.x-3,F.y-18,F.x+3,F.y-3)){if((F.stuck=(F.stuck||0)+1)>20){F.y-=3;F.vy=Math.min(F.vy,0);}}else F.stuck=0;
+  if(G.run&&G.st&&G.st.za&&!F.remote){const z=G.run.zones[G.st.zi];if(z){if(F.x<z.x0+6){F.x=z.x0+6;F.vx=Math.max(0,F.vx);}else if(F.x>z.x1-6){F.x=z.x1-6;F.vx=Math.min(0,F.vx);}}}
   if(F.y>LIQY+4){fallKill(F);return;}
   if(F.cd>0)F.cd--;
   if(!F.stun&&!webbed){if((inp.shoot||chgP)&&F.cd<=0){fire(F,false);F.cd=WEAPONS[F.a.weapon].rate;}
@@ -1088,7 +1129,7 @@ function updMines(){
   G.mines=G.mines.filter(m=>!m.dead&&m.y<LIQY+2);}
 function updItems(){
   if(isAuth()&&G.phase==="fight"&&--G.itemT<=0){const n=G.online?G.players.length:2;G.itemT=300+Math.random()*300;
-    if(G.items.length<3+n)G.items.push({id:"o"+Math.random().toString(36).slice(2,8),k:ITK[Math.floor(Math.random()*ITK.length)],x:30+Math.random()*(WW-60),y:-8,vy:0});}
+    if(G.items.filter(i=>!/^st/.test(i.id)).length<3+n)G.items.push({id:"o"+Math.random().toString(36).slice(2,8),k:ITK[Math.floor(Math.random()*ITK.length)],x:G.run?Math.max(30,Math.min(WW-30,runMaxX()+(Math.random()-.3)*360)):30+Math.random()*(WW-60),y:-8,vy:0});if(G.run){const it=G.items[G.items.length-1];it.y=Math.max(-8,surfaceY(it.x,0)-200);}}
   for(const it of G.items){if(!solid(it.x,it.y+1)){it.vy=Math.min(1.1,it.vy+.04);it.y+=it.vy;}else{it.vy=0;while(it.y>0&&solid(it.x,it.y))it.y--;}}
   if(G.phase==="fight")for(const F of G.f){if(F.remote||F.dead||F.foe)continue;for(const it of G.items){if(G.taken.has(it.id))continue;
     if(Math.abs(F.x-it.x)<11&&it.y>F.y-26&&it.y<F.y+8){applyItem(F,it);G.taken.add(it.id);G.myTaken.push({id:it.id,t:G.t});}}}
@@ -1323,8 +1364,8 @@ function updProj(){const M=G.mon;
 // ---------- Effets de décor (calculés depuis la graine et le temps : identiques chez tous les joueurs) ----------
 const ENV={isEnv:true,a:{nom:"Le volcan",sec:"#ff7a1a"}};
 function envStep(){const th=G.theme,t=G.envT;
-  if(th==="volcan"){LIQY=LIQ0-Math.min(170,t*.024);if(t===1)addFeed("La lave commence à monter !");
-    if(t>=420&&(t-420)%600===0){const r=rng((G.seed^(t*7919))>>>0);r();const top=surfaceY(WW/2,0);G.shake=Math.max(G.shake,14);sfx("rumble");addFeed("Éruption !");
+  if(th==="volcan"){LIQY=LIQ0-Math.min(G.run?30:170,t*.024);if(t===1)addFeed("La lave commence à monter !");
+    if(!G.run&&t>=420&&(t-420)%600===0){const r=rng((G.seed^(t*7919))>>>0);r();const top=surfaceY(WW/2,0);G.shake=Math.max(G.shake,14);sfx("rumble");addFeed("Éruption !");
       for(let i=0;i<5;i++)G.proj.push(mkProj({kind:"lava",owner:ENV,x:WW/2+(r()-.5)*20,y:top-6,vx:(r()-.5)*6,vy:-5-r()*3.5,w:8,h:8,dmg:8,grav:.15,rad:18,life:400}));
       for(let i=0;i<24;i++)G.fx.push({x:WW/2+(Math.random()-.5)*20,y:top-4,vx:(Math.random()-.5)*3,vy:-Math.random()*4,life:40,c:i%2?"#ff7a1a":"#ffd04a",s:3});}}
   else if(th==="mer"){LIQY=LIQ0-34*(.5-.5*Math.cos(t*2*Math.PI/2400));if(t===1)addFeed("Attention à la marée !");}
@@ -1495,19 +1536,21 @@ function drawSkin(g,ox,oy,face,pose,a,t,opt){const P=a.prim,S=a.sec,V=a.visor,D=
   if(opt.white){for(const q of parts)draw(q[0],q[1],q[2],q[3],"#ffffff",1);}else{for(const q of parts)draw(q[0],q[1],q[2],q[3],opt.glow||OUT,1);for(const q of parts)draw(q[0],q[1],q[2],q[3],q[4],0);}}
 
 function storyInit(lv){const np=G.online?G.players.length:1;
-  G.st={lv,got:0,sq:0,spT:5*60,foeN:0,t:0,win:false,ids:[],dlg:lv.dlg.slice(),dlgT:0,secretT:0};G.timer=1e9;
+  G.st={lv,got:0,sq:0,spT:5*60,foeN:0,t:0,win:false,ids:[],dlg:lv.dlg.slice(),dlgT:0,secretT:0,zi:0,za:false,zq:0,zt:0,pi:0,cp:60,goT:-999};G.timer=1e9;
+  if(G.run)runInit(G.st,lv,np);
   if(lv.goal.type==="collecte"){const r=rng((G.seed^0x51ed)>>>0);const n=lv.goal.n+2;
-    for(let i=0;i<n;i++){const x=findGround(Math.round(40+(i+.5)*(WW-80)/n+(r()-.5)*40));const top=r()<.45;let y=surfaceY(x,0)-2;
+    const L0=G.run?320:40,L1=G.run?G.run.exitX-160:WW-40;
+    for(let i=0;i<n;i++){const x=findGround(Math.round(L0+(i+.5)*(L1-L0)/n+(r()-.5)*40));const top=r()<.45;let y=surfaceY(x,0)-2;
       if(!top){y=surfaceY(x,Math.min(LIQY-30,y+40))-2;if(y>=LIQY-8)y=surfaceY(x,0)-2;}
       const id="st"+i;G.st.ids.push(id);if(isAuth())G.items.push({id,k:lv.goal.k,x,y,vy:0});}}
   if(lv.egg){ // poubelle cachée tout à gauche : il faut la percer pour atteindre le papier
     const gx=Math.floor(10/CS),gt=groundTop(gx+3);for(let cy=gt-9;cy<gt;cy++)for(let cx=gx;cx<gx+8;cx++){const edge=cx<gx+2||cx>gx+5||cy<gt-7;TER.c[cy*CW+cx]=edge?1:0;}paintAll();
     if(isAuth())G.items.push({id:"secret",k:"secret",x:(gx+4)*CS,y:gt*CS-2,vy:0});}
   if(lv.boss&&G.mon){G.mon.mx=Math.round(G.mon.mx*(.75+.25*np));G.mon.hp=G.mon.mx;}}
-function spawnFoe(k){const d=FOES[k],np=G.online?G.players.length:1;const a=cleanCfg(Object.assign({},d),d.nom);a.nopack=true;
+function spawnFoe(k,x0,x1){const d=FOES[k],np=G.online?G.players.length:1;const a=cleanCfg(Object.assign({},d),d.nom);a.nopack=true;
   const F=mkFighter(a,1);F.maxHp=F.hp=Math.max(4,Math.round(F.maxHp*d.hp*.75*(1+(np-1)*.25)));F.foe=k;F.isBot=true;F.ctrl="ai";F.team=1;F.peer=(G.online?G.me.peer:"L")+"#e"+(++G.st.foeN);
-  const pl=G.f.filter(T=>!T.foe&&!T.dead);let x=WW/2;for(let i=0;i<12;i++){x=30+Math.random()*(WW-60);if(pl.every(T=>Math.abs(T.x-x)>140))break;}
-  F.x=findGround(x);F.y=-20-Math.random()*40;if(d.fly)F.jet=1e9;F.say={txt:d.barks[Math.floor(Math.random()*d.barks.length)],t:G.t+150};G.f.push(F);}
+  const pl=G.f.filter(T=>!T.foe&&!T.dead);let x=WW/2;for(let i=0;i<12;i++){x=x0!=null?x0+Math.random()*(x1-x0):30+Math.random()*(WW-60);if(pl.every(T=>Math.abs(T.x-x)>(x0!=null?90:140)))break;}
+  if(x0!=null){const sp=safeSpot(x);F.x=sp.x;F.y=sp.y;const yy=sp.y-130;if(!boxHit(F.x-6,yy-24,F.x+6,yy))F.y=yy;}else{F.x=findGround(x);F.y=-20-Math.random()*40;}if(d.fly)F.jet=1e9;F.say={txt:d.barks[Math.floor(Math.random()*d.barks.length)],t:G.t+150};G.f.push(F);}
 function storySpawn(){const S=G.st,lv=S.lv;if(G.phase!=="fight"||!lv.foes.length)return;
   const live=G.f.filter(F=>F.foe&&!F.dead).length,np=G.online?G.players.length:1,cap=2+np*2;
   if(--S.spT>0)return;
@@ -1519,22 +1562,79 @@ function storyFlow(){const S=G.st,lv=S.lv;S.t++;S.got=S.ids.filter(id=>G.taken.h
   if(G.taken.has("secret")&&!S.secretT){S.secretT=G.t;sfx("power");if(!SAVE.secret){SAVE.secret=true;saveStory();addFeed("Débloqué à la forge : finition Papier froissé !");}}
   if(S.dlg.length&&G.t>=S.dlgT){S.cur=S.dlg.shift();S.dlgT=G.t+300;}else if(!S.dlg.length&&G.t>=S.dlgT)S.cur=null;
   for(const F of G.f)if(F.foe){const d=FOES[F.foe];if(!F.dead&&(!F.say||G.t>F.say.t+200)&&Math.random()<1/420)F.say={txt:d.barks[Math.floor(Math.random()*d.barks.length)],t:G.t+150};
-    if(F.dead&&!F.saidDie){F.saidDie=true;F.say={txt:d.die[Math.floor(Math.random()*d.die.length)],t:G.t+150};}}
+    if(F.dead&&!F.saidDie){F.saidDie=true;if(G.run&&isAuth()&&!F.remote&&Math.random()<.22)G.items.push({id:"d"+Math.random().toString(36).slice(2,8),k:"soin",x:Math.max(20,Math.min(WW-20,F.x)),y:Math.max(0,F.y-14),vy:0});F.say={txt:d.die[Math.floor(Math.random()*d.die.length)],t:G.t+150};}}
   if(!G.online||isAuth()){G.f=G.f.filter(F=>!(F.foe&&!F.remote&&F.dead&&F.deadT>160));
-    if(!S.win&&G.phase==="fight"){storySpawn();const ty=lv.goal.type;
+    if(!S.win&&G.phase==="fight"&&G.run)runHost(S,lv);
+    else if(!S.win&&G.phase==="fight"){storySpawn();const ty=lv.goal.type;
       if(ty==="collecte"&&S.got>=lv.goal.n)S.win=true;
       else if(ty==="combat"&&S.sq>=lv.foes.length&&!G.f.some(F=>F.foe&&!F.dead))S.win=true;
       else if(ty==="survie"&&S.t>=lv.goal.n*60)S.win=true;
       else if(ty==="boss"&&G.mon&&G.mon.dead&&G.mon.deadT>60)S.win=true;}}
   if(G.phase!=="fight")return;
   if(S.win){G.phase="ko";G.pt=0;G.storyWon=true;sfx("big");for(const F of G.f)if(F.foe&&!F.dead&&!F.remote){F.hp=0;F.dead=true;F.deadT=0;koFx(F);}}
-  else if(G.pt>30&&alivePlayers().length===0){G.phase="ko";G.pt=0;G.storyWon=false;sfx("ko");}}
+  else if(G.pt>30&&!storyAnyUp()){G.phase="ko";G.pt=0;G.storyWon=false;sfx("ko");}}
+function runInit(S,lv,np){const ch=STORY.find(c=>c.ch===lv.ch),i=ch.lv.indexOf(lv);
+  let fo=lv.foes;if(lv.boss&&i>0)fo=ch.lv[i-1].foes;if(!fo.length)fo=[["rat",2,8]];
+  let idx=0;G.run.zones.forEach((z,j)=>{const m=j===G.run.zones.length-1?3:2;z.groups=[];for(let q=0;q<m;q++)z.groups.push(fo[idx++%fo.length]);});
+  S.fo=fo;S.survN=lv.goal.type==="survie"?Math.round(lv.goal.n*.6):0;}
+function runMaxX(){let m=-1;for(const F of G.f)if(!F.foe&&!F.dead&&F.x>-100)m=Math.max(m,F.x);return m<0?60:m;}
+function runHost(S,lv){const R=G.run,mx=runMaxX(),np=G.online?G.players.length:1;
+  if(S.za){const z=R.zones[S.zi];S.zt++;const live=G.f.filter(F=>F.foe&&!F.dead).length,cap=2+np*2;
+    if(live<=1)S.spT=Math.min(S.spT,40);
+    if(--S.spT<=0&&live<cap){if(S.zq>=z.groups.length&&z.surv)S.zq=0;
+      if(S.zq<z.groups.length){const [k,c]=z.groups[S.zq++];const n=Math.max(1,Math.round(c*(1+(np-1)*.5))),mid=(z.x0+z.x1)/2;
+        for(let i=0;i<n;i++){if(Math.random()<.7)spawnFoe(k,mid,z.x1-30);else spawnFoe(k,z.x0+30,mid);}S.spT=6*60;}}
+    const done=z.surv?S.zt>=S.survN*60:(S.zq>=z.groups.length&&live===0);
+    if(done){S.za=false;S.zi++;S.cp=z.x1-40;S.goT=G.t;sfx("power");G.items.push({id:"z"+S.zi+Math.random().toString(36).slice(2,6),k:"soin",x:Math.round(z.x1-70),y:Math.max(0,surfaceY(z.x1-70,0)-60),vy:0});
+      if(z.surv)for(const F of G.f)if(F.foe&&!F.dead&&!F.remote){F.hp=0;F.dead=true;F.deadT=0;koFx(F);}}}
+  else if(S.zi<R.zones.length&&mx>=R.zones[S.zi].x0+150){S.za=true;S.zq=0;S.zt=0;S.spT=30;S.cp=R.zones[S.zi].x0+40;sfx("alarm");}
+  else if(S.pi<R.pats.length&&mx>=R.pats[S.pi]-300){const x=R.pats[S.pi++],k=S.fo[Math.floor(Math.random()*S.fo.length)][0];spawnFoe(k,x,x+140);if(np>1||Math.random()<.4)spawnFoe(k,x,x+140);}
+  else if(S.zi>=R.zones.length&&mx>=R.exitX-24){if(lv.goal.type==="collecte"&&S.got<lv.goal.n){}else if(lv.boss)bossStage();else S.win=true;}}
+// Arrivée au bout d'un niveau de boss : on passe dans l'arène du boss.
+function bossStage(){if(G.bossStage)return;const S=G.st,keep=G.f.filter(F=>!F.foe),np=G.online?G.players.length:1;G.bossStage=true;
+  if(G.online)for(const [id,R2] of G.remotes)if(R2.foe)G.remotes.delete(id);
+  setupRound((Math.imul(G.seed,7)+1)>>>0,S.lv.th);G.f=keep;S.za=false;S.sq=0;S.spT=8*60;
+  keep.filter(F=>!F.remote).forEach((F,i)=>{const j=G.online?Math.max(0,G.players.indexOf(F.peer)):i;place(F,j,G.online?G.players.length:keep.length);F.vx=F.vy=0;if(F.dead&&F.respawn){F.respawn=G.t;}});
+  if(G.mon){G.mon.mx=Math.round(G.mon.mx*(.75+.25*np));G.mon.hp=G.mon.mx;}
+  const me=G.online?G.me:G.f[0];if(me)G.cam={x:me.x,y:me.y,z:G.cam.z};addFeed("Le boss t'attend !");}
+function storyLives(F){if(F.respawn==null){if(F.lives==null)F.lives=2;if(F.lives>0){F.lives--;F.respawn=G.t+120;}else F.respawn=0;}
+  if(F.respawn&&G.t>=F.respawn&&G.phase!=="ko"&&G.phase!=="over")storyRespawn(F);}
+function storyRespawn(F){const S=G.st,R=G.run;let x=WW/2;
+  if(R){x=S.cp;if(S.za)x=R.zones[S.zi].x0+40;else{const al=G.f.filter(T=>!T.foe&&!T.dead&&T!==F&&T.x>0);if(al.length)x=Math.max(...al.map(T=>T.x))-40;}}
+  else{const al=G.f.filter(T=>!T.foe&&!T.dead&&T!==F&&T.x>0);if(al.length)x=al[0].x;}
+  const sp=safeSpot(x);Object.assign(F,{x:sp.x,y:sp.y,vx:0,vy:0,dead:false,deadT:0,hp:F.maxHp,inv:150,respawn:null,fuel:90,held:0,web:0,stun:0,charge:0,kb:null,kk:null,tallied:false,hook:null});
+  sfx("power");for(let i=0;i<12;i++)G.fx.push({x:F.x,y:F.y-12,vx:(Math.random()-.5)*3,vy:-Math.random()*3,life:20,c:F.a.visor,s:2});}
+const storyUp=F=>!F.dead||!!F.respawn||(F.respawn==null&&!F.remote&&(F.lives==null||F.lives>0));
+function storyAnyUp(){if(!G.online)return G.f.some(F=>!F.foe&&storyUp(F));
+  return G.players.some(peer=>{if(peer===G.pilot)return false;const R2=fighterOf(peer);if(R2)return storyUp(R2);return G.present.has(peer)&&G.pt<240;});}
+function runSync(q){const S=G.st,R=G.run;if(!S)return;
+  if(q.sb&&!G.bossStage){bossStage();return;}
+  if(!R||!Array.isArray(q.zs))return;const zi=Math.max(0,Math.min(R.zones.length,num(q.zs[0],0))),za=!!q.zs[1];
+  if(S.za&&!za)S.goT=G.t;if(!S.za&&za)sfx("alarm");S.zi=zi;S.za=za&&zi<R.zones.length;S.zt=num(q.zs[2],0);
+  S.cp=S.za?R.zones[zi].x0+40:zi>0?R.zones[zi-1].x1-40:60;}
+// Dessin des murs de zone et de la sortie
+function drawRunWorld(){const S=G.st,R=G.run;if(!S||!R)return;const t=G.t;
+  if(S.za){const z=R.zones[S.zi];for(const x of [z.x0,z.x1]){const gy=surfaceY(x,0);for(let y=gy-260;y<gy;y+=6){g.globalAlpha=.35+.35*Math.sin(t*.2+y*.1);px(x-1,y,3,4,"#3fe0c4");}g.globalAlpha=.12;px(x-6,gy-260,12,260,"#3fe0c4");g.globalAlpha=1;}}
+  const ex=R.exitX,gy=surfaceY(ex,0),boss=!!S.lv.boss,col=boss?"#ff3b30":"#a6e05a";
+  px(ex-22,gy-46,4,46,"#5a5f68");px(ex+18,gy-46,4,46,"#5a5f68");px(ex-24,gy-52,48,10,"#2a2420");px(ex-24,gy-52,48,1,col);
+  txt(boss?"DANGER":"SORTIE",ex,gy-51,5,t%40<20?col:"#F3E3C3");if(!boss&&t%30<15)px(ex-4,gy-36,8,2,col);
+  if(G.st.lv.goal.type==="collecte"&&S.got<S.lv.goal.n){g.globalAlpha=.25;px(ex-18,gy-42,36,42,"#ff5c7a");g.globalAlpha=1;}}
+function runHud(S,lv){const R=G.run,y=60,x0=VW/2-80,w=160;g.fillStyle="#17110Ecc";g.fillRect(x0-4,y-3,w+8,9);g.fillStyle="#5a5f68";g.fillRect(x0,y+1,w,1);
+  R.zones.forEach((z,i)=>{const zx=x0+w*((z.x0+z.x1)/2)/WW;g.fillStyle=i<S.zi?"#a6e05a":i===S.zi&&S.za?(G.t%20<10?"#ff5c7a":"#ffb52e"):"#8B939C";g.fillRect(Math.round(zx)-2,y-1,4,4);});
+  g.fillStyle=lv.boss?"#ff3b30":"#a6e05a";g.fillRect(x0+w-2,y-2,3,6);
+  for(const F of G.f)if(!F.foe&&!F.dead&&F.x>-100){g.fillStyle=(G.online?F===G.me:F.ctrl===0)?"#ffb52e":F.a.prim;g.fillRect(Math.round(x0+w*F.x/WW)-1,y-2,3,3);}
+  if(!S.za&&G.phase==="fight"&&(G.t-S.goT<200||S.zi===0&&G.pt<240)&&G.t%30<20)txt("GO →",VW-40,VH/2-20,12,"#ffb52e");}
 function storyDone(){const lv=G.st.lv;G.unlockMsg="";if(G.storyWon&&!SAVE.done.includes(lv.id)){SAVE.done.push(lv.id);saveStory();
     for(const k in STORYUNL)if(STORYUNL[k][0]===lv.id){const [t,id]=k.split(":");const nm=(t==="h"?HELMETS:t==="f"?FINS:t==="p"?PACKS:WEAPONS)[id];G.unlockMsg=` Débloqué à la forge : ${nm.nom||nm} !`;}}}
 function storyHud(){const S=G.st;if(!S)return;const lv=S.lv,ty=lv.goal.type;
-  const obj=ty==="collecte"?`${lv.goal.k==="bouffe"?"CONSERVES":"COMPOSANTS"} ${S.got}/${lv.goal.n}`:ty==="combat"?`ENNEMIS RESTANTS : ${G.f.filter(F=>F.foe&&!F.dead).length+(lv.foes.length-S.sq>0?"+":"")}`:ty==="survie"?`TENIR : ${Math.max(0,Math.ceil(lv.goal.n-S.t/60))} S`:"VAINCS LE BOSS";
-  if(G.phase==="fight")txt(obj,VW/2,G.online?40:26,7,"#ffb52e");
-  if(S.cur&&G.phase!=="ko"){const [who,t]=S.cur,lines=wrapTxt(t,62);const h=12+lines.length*9,y=VH-h-26;g.fillStyle="#17110Ee6";g.fillRect(40,y,VW-80,h);g.fillStyle="#FF6A1A";g.fillRect(40,y,3,h);
+  const col=ty==="collecte"?`${lv.goal.k==="bouffe"?"CONSERVES":"COMPOSANTS"} ${S.got}/${lv.goal.n}`:"";
+  const obj=G.run?(S.za?(G.run.zones[S.zi].surv?`TIENS LA ZONE : ${Math.max(0,Math.ceil(S.survN-S.zt/60))} S`:`ZONE ${S.zi+1}/${G.run.zones.length} : ÉLIMINE LES ENNEMIS (${G.f.filter(F=>F.foe&&!F.dead).length})`)
+      :S.zi<G.run.zones.length?"AVANCE VERS LA DROITE →":ty==="collecte"&&S.got<lv.goal.n?`IL MANQUE ${lv.goal.n-S.got} ${lv.goal.k==="bouffe"?"CONSERVES":"COMPOSANTS"} !`:lv.boss?"LE BOSS T'ATTEND AU BOUT →":"FONCE VERS LA SORTIE →")+(col&&S.got<lv.goal.n&&!(S.zi>=G.run.zones.length&&!S.za)?" · "+col:"")
+    :ty==="collecte"?`${lv.goal.k==="bouffe"?"CONSERVES":"COMPOSANTS"} ${S.got}/${lv.goal.n}`:ty==="combat"?`ENNEMIS RESTANTS : ${G.f.filter(F=>F.foe&&!F.dead).length+(lv.foes.length-S.sq>0?"+":"")}`:ty==="survie"?`TENIR : ${Math.max(0,Math.ceil(lv.goal.n-S.t/60))} S`:"VAINCS LE BOSS";
+  if(G.phase==="fight")txt(obj,VW/2,G.run?48:G.online?40:26,7,"#ffb52e");if(G.run)runHud(S,lv);
+  {const me=G.online?G.me:G.f[0];if(me&&!me.foe){const lv2=(me.lives==null?2:me.lives)+(me.dead?0:1);txt(`VIES ${lv2}`,G.online?6:8,G.online?40:26,5,lv2>1?"#a6e05a":"#ff5c7a","left");
+    if(me.dead&&me.respawn&&G.phase==="fight")txt(`RETOUR DANS ${Math.max(1,Math.ceil((me.respawn-G.t)/60))}...`,VW/2,VH/2-10,9,"#ecebff");}}
+  if(S.cur&&G.phase!=="ko"){const [who,t]=S.cur,lines=wrapTxt(t,62);const h=12+lines.length*9,y=G.run?68:VH-h-26;g.fillStyle="#17110Ee6";g.fillRect(40,y,VW-80,h);g.fillStyle="#FF6A1A";g.fillRect(40,y,3,h);
     txt(who,48,y+2,5,"#ffb52e","left");lines.forEach((l,i)=>txt(l,48,y+11+i*9,5,"#F3E3C3","left"));}
   if(S.secretT&&G.t-S.secretT<420){const y=60;g.fillStyle="#17110Ef0";g.fillRect(60,y,VW-120,64);g.fillStyle="#efe2c0";g.fillRect(70,y+22,VW-140,30);
     txt("UN VIEUX PAPIER FROISSÉ, AU FOND DE LA POUBELLE...",VW/2,y+6,5,"#ffb52e");g.font="italic 600 13px 'Chakra Petch',sans-serif";g.textAlign="center";g.fillStyle="#3a2a6a";g.fillText("« memo aime plus gigi »",VW/2,y+30);}}
@@ -1656,6 +1756,7 @@ function updCam(){const c=G.cam;let pts,tz;const M=G.mon;
   else if(G.online&&!G.me.dead){pts=[{x:G.me.x,y:G.me.y-12}];tz=1.7;}
   else if(G.online&&G.spec){pts=[{x:G.spec.x,y:G.spec.y-12}];tz=1.5;}
   else{pts=G.f.filter(F=>!F.dead&&!F.foe).map(F=>({x:F.x,y:F.y-12}));if(G.online)tz=1.2;}
+  if(G.run&&pts.length){pts=pts.map(q=>({x:q.x+55,y:q.y-22}));if(tz===undefined||tz>1.6)tz=Math.min(1.6,tz||1.6);}
   if(!pts.length)pts=[{x:WW/2,y:WH/2}];
   let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const p of pts){x0=Math.min(x0,p.x);x1=Math.max(x1,p.x);y0=Math.min(y0,p.y);y1=Math.max(y1,p.y);}
   if(tz===undefined)tz=Math.min(2,Math.max(.6,Math.min(SW/(x1-x0+240),SH/(y1-y0+170))));
@@ -1779,11 +1880,11 @@ let specVis=false;function render(){const hold=G.online?G.me:G.f[0];const sv=!!(
   g.setTransform(1,0,0,1,0,0);g.fillStyle="#17110E";g.fillRect(0,0,SW,SH);
   const sx=G.shake?(Math.random()-.5)*G.shake:0,sy=G.shake?(Math.random()-.5)*G.shake:0;
   g.setTransform(z,0,0,z,Math.round(-(c.x-SW/z/2)*z+sx),Math.round(-(c.y-SH/z/2)*z+sy));
-  g.drawImage(getBg(G.theme),0,0,WW,WH);drawSkyLife();
+  drawBgTiles();drawSkyLife();
   const M=G.mon;if(M&&M.k==="ver")drawMonster(M);
   g.drawImage(TER.cv,0,0);
   if(M&&M.k==="ver"&&!M.dead)drawMonster(M,true);
-  drawProps();
+  drawProps();drawRunWorld();
   for(const it of G.items)drawItem(it);
   for(const m of G.mines){const x=Math.round(m.x),y=Math.round(m.y);g.fillStyle="#0a0a16";g.fillRect(x-4,y-3,8,3);g.fillStyle=m.owner&&m.owner.a?m.owner.a.sec:"#888";g.fillRect(x-3,y-2,6,2);
     g.fillStyle=m.arm>0?"#ffd04a":(G.t%30<15?"#ff2d55":"#55203a");g.fillRect(x-1,y-4,2,1);}
@@ -1934,6 +2035,7 @@ function remoteState(F,q){if(isPilotF(F)){pilotPark(F);return;}
   const hp=Math.max(0,num(q.hp,F.hp));if(hp<F.hp-.01){for(let i=0;i<8;i++)G.fx.push({x:F.x,y:F.y-12,vx:(Math.random()-.5)*4,vy:(Math.random()-.8)*3,life:18,c:i%2?"#ffffff":F.a.prim,s:2});}
   F.hp=hp;F.maxHp=Math.max(1,num(q.mx,F.maxHp));F.inv=num(q.inv,0);F.charge=num(q.ch,0);F.shootAnim=num(q.sa,0);F.onGround=!!q.og;F.dashT=num(q.dt,0);F.stun=num(q.st,0);
   F.buffS=q.bf&1?2:0;F.buffD=q.bf&2?2:0;F.web=q.wb?2:0;F.shield=q.bf&4?2:0;F.jetOn=!!(q.bf&8);F.held=q.bf&16?1:0;F.hook=Array.isArray(q.hk)?{x:clampX(num(q.hk[0],F.x)),y:clampY(num(q.hk[1],F.y)),st:"pull"}:null;
+  if(G.st){F.respawn=q.rs?1:0;F.lives=num(q.lf,2);if(!q.d&&F.dead){F.dead=false;F.deadT=0;}}
   if(q.d&&!F.dead){F.dead=true;F.deadT=0;sfx("ko");koFx(F);const kb=typeof q.kb==="string"?q.kb.slice(0,40):null;F.remoteKb=kb;
     addFeed(kb===G.me.peer?`Tu as éliminé ${F.a.nom} !`:kb==="mon"&&G.mon?`${MONS[G.mon.k].nom} a éliminé ${F.a.nom}`:`${F.a.nom} est éliminé`);}}
 function botState(F){return {id:F.peer,fo:F.foe||undefined,cfg:{nom:F.a.nom,prim:F.a.prim,sec:F.a.sec,visor:F.a.visor,helmet:F.a.helmet,weapon:F.a.weapon,sk:F.a.sk,toast:F.a.toast,stats:F.a.stats},x:r1(F.x),y:r1(F.y),vx:r1(F.vx),vy:r1(F.vy),n:G.t,f:F.face,hp:r1(F.hp),mx:F.maxHp,inv:F.inv,ch:F.charge,sa:F.shootAnim,og:F.onGround?1:0,dt:F.dashT,st:F.stun,d:F.dead?1:0,kb:F.kb||null,
@@ -1959,7 +2061,7 @@ function syncNet(){const peers=NET.r.peers();const seenB=new Set();const present
   G.present=present;G.authPeer=G.players.find(x=>present.has(x))||G.me.peer;
   if(!isAuth()){const q=G.netG.get(G.authPeer);if(q){
     if(Array.isArray(q.it))G.items=q.it.slice(0,24).filter(o=>o&&typeof o.id==="string"&&has(ITEMS,o.k)&&!G.taken.has(o.id)).map(o=>{const old=G.items.find(i=>i.id===o.id);return {id:o.id.slice(0,12),k:o.k,x:clampX(num(o.x,0)),y:old?old.y+(clampY(num(o.y,0))-old.y)*.3:clampY(num(o.y,0)),vy:0};});
-    if(G.st&&q.sw)G.st.win=true;
+    if(G.st&&q.sw)G.st.win=true;if(G.st)runSync(q);
     if(q.mo&&typeof q.mo==="object"&&G.rule==="vagues"&&num(q.mo.w,0)>(G.wave||0)&&num(q.mo.w,0)<200&&has(MONS,q.mo.k))spawnWave(q.mo.k,num(q.mo.w,1));
     if(q.mo&&typeof q.mo==="object"&&!(G.rule==="vagues"&&num(q.mo.w,0)<(G.wave||0))){G.monNet=q.mo;if(q.mo.d&&typeof q.mo.lk==="string")G.monKiller=q.mo.lk.slice(0,40);}
     if(Array.isArray(q.ms)&&G.mon)for(const s of q.ms.slice(0,30)){if(!Array.isArray(s))continue;const key=G.authPeer+":m"+num(s[0],0);if(G.seenShots.has(key))continue;G.seenShots.add(key);
@@ -1976,7 +2078,8 @@ function sendNet(){const me=G.me,t=G.t;
   const bots=G.f.filter(F=>F.isBot&&!F.remote);if(bots.length)q.bots=bots.map(botState);
   if(G.rhN)q.rh=G.rhN;
   if(G.pilot===me.peer){q.mi=pilotBits(readInput(0,true))|(G.miAcc||0);G.miAcc=0;}
-  if(isAuth()){if(G.st&&G.st.win)q.sw=1;q.it=G.items.slice(0,24).map(it=>({id:it.id,k:it.k,x:Math.round(it.x),y:Math.round(it.y)}));
+  if(G.st){q.rs=me.dead&&me.respawn?1:0;q.lf=me.lives==null?2:me.lives;}
+  if(isAuth()){if(G.st&&G.st.win)q.sw=1;if(G.st&&G.run)q.zs=[G.st.zi,G.st.za?1:0,G.st.zt];if(G.st&&G.bossStage)q.sb=1;q.it=G.items.slice(0,24).map(it=>({id:it.id,k:it.k,x:Math.round(it.x),y:Math.round(it.y)}));
     const M=G.mon;if(M){q.mo={k:M.k,x:r1(M.x),y:r1(M.y),f:M.f,st:M.st,a:Math.round((M.ang||0)*100)/100,hp:r1(M.hp),mx:M.mx,d:M.dead?1:0,w:G.wave||0,lk:M.dead?G.monKiller:null,sp:M.sp,bt:M.bite||0,sc:M.sc?Math.round(M.sc*100)/100:undefined,sh:M.sh?1:0,seg:M.seg.slice(0,40)};
       q.ms=G.monShots.map(s=>[s.i,s.k,s.x,s.y,s.vx,s.vy]);}}
   NET.r.presence({g:q}).catch(()=>{});}
