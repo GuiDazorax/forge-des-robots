@@ -13,9 +13,10 @@ Jeu de combat de robots en pixel art, pour Android. Crée ton robot (couleurs, c
 - Menu à 3 portes : Histoire, Arène, Forge.
 - Mode histoire complet : 5 chapitres, 30 missions, en solo ou en coop Bluetooth. Chaque chapitre débloque un objet à la forge, et un secret se cache dans la première mission.
 - Option « monstre joueur » : à 3 vrais joueurs ou plus, un joueur tiré au sort contrôle le monstre.
-- Jetpack à acheter à l'atelier (réservoir qui se recharge au sol).
-- Visée libre : glisse le pouce sur TIR (téléphone) ou vise à la souris.
-- 6 monstres géants (dont le Mimic, le Colosse de ferraille et la Soucoupe pilleuse), bonus et objets spéciaux (bouclier, jetpack, mines, grappin).
+- Jetpack pour tous les robots (réservoir qui se recharge au sol), avec plusieurs modèles à choisir à la forge.
+- Deux boutons de tir : TIR tire en continu et se dirige en glissant le pouce, CHARGE garde le tir chargé. À la souris : clic gauche et clic droit.
+- Décors vivants : lampadaires, enseignes, fleurs, sapins, fumerolles, algues, cristaux, petites bêtes et ciel animé.
+- 6 monstres géants (dont le Mimic, le Colosse de ferraille et la Soucoupe pilleuse), bonus et objets spéciaux (bouclier, turbo jet, mines, grappin).
 - Robots ordinateur pour compléter une partie, tableau des scores, mode spectateur.
 - Pièces gagnées selon ta place parmi les vrais joueurs (12/8/4/2 à 4 joueurs ou plus, 6/4/2 à 3, 2/1 à 2, 1 seul contre l'IA) pour débloquer casques, finitions et canons.
 - Musique chiptune originale et vibrations.
